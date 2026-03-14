@@ -445,10 +445,11 @@ border-bottom: 1px solid var(--border); padding: var(--space-sm)
         }
 
 /* ─── RESPONSIVE MODE OVERRIDES ───────── */
-/* ─── RESPONSIVE MODE OVERRIDES ───────── */
 .main-content {
-    padding-top: var(--nav-height);
-    }
+      padding-top: var(--nav-height);
+          }
+
+
  @media (max-width: 768px) {
 .main-content {
     padding-top: 0;

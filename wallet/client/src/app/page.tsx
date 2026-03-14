@@ -287,7 +287,7 @@ export default function LandingPage() {
           </p>
           <div className="cta-actions">
             <button className="btn btn-primary" style={{ fontSize: 16, padding: '16px 40px' }}>
-              Connect Wallet — Free
+              Connect Wallet
             </button>
             <button className="btn btn-ghost">View Documentation</button>
           </div>
