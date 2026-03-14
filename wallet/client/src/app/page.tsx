@@ -321,7 +321,7 @@ const pageStyles = `
 /* ─── HERO ─── */
 
 .hero-section {
-background: var(--bg-base);
+background: yellow
 align-items: flex-start;
 padding-top: calc(var(--nav-height) + 80px);
 }
@@ -613,6 +613,73 @@ text-align: center;
 }
 
 .cta-body {
+font-size: 20px;
+color: var(--text-secondary);
+max-width: 520px;
+}
+
+.cta-actions { display: flex; gap: var(--space-md); flex-wrap: wrap; justify-content: center; }
+
+.cta-chains { display: flex; gap: var(--space-sm); flex-wrap: wrap; justify-content: center; }
+
+/* ─── SECTION DOTS ───*/
+.section-dots {
+position: fixed;
+right: var(--space-xl);
+top: 50%;
+transform: translateY(-50%);
+display: flex;
+flex-direction: column;
+gap: var(--space-sm);
+z-index: 50;
+}
+
+.section-dot {
+width: 6px;
+height: 6px;
+border-radius: 50%;
+background: var(--border);
+transition: all var(--transition-base);
+}
+
+.section-dot.active {
+background: var(--accent);
+transform: scale(1.4);
+}
+.cta-body {
+font-size: 20px;
+color: var(--text-secondary);
+max-width: 520px;
+}
+
+.cta-actions { display: flex; gap: var(--space-md); flex-wrap: wrap; justify-content: center; }
+
+.cta-chains { display: flex; gap: var(--space-sm); flex-wrap: wrap; justify-content: center; }
+
+/* ─── SECTION DOTS ───*/
+.section-dots {
+position: fixed;
+right: var(--space-xl);
+top: 50%;
+transform: translateY(-50%);
+display: flex;
+flex-direction: column;
+gap: var(--space-sm);
+z-index: 50;
+}
+
+.section-dot {
+width: 6px;
+height: 6px;
+border-radius: 50%;
+background: var(--border);
+transition: all var(--transition-base);
+}
+
+.section-dot.active {
+background: var(--accent);
+transform: scale(1.4);
+}.cta-body {
 font-size: 20px;
 color: var(--text-secondary);
 max-width: 520px;
