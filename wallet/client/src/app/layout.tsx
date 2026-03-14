@@ -130,9 +130,16 @@ export default function Layout() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  useEffect(() => {
+      window.scrollTo(0, 0);
+      }, [location.pathname]);
   
       return (
-  <div className={isMobile ? 'mobile-mode app-shell' : 'desktop-mode app-shell'}>
+  <div
+    key={isMobile ? 'mobile' : 'desktop'}
+    className={isMobile ? 'mobile-mode app-shell' : 'desktop-mode app-shell'}
+    style={{ width: '100vw', minHeight: '100vh' }}
+      >
       
       {/* Sidebar for desktop */}
       {!isMobile && (
