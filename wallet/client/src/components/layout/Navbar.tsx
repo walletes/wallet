@@ -16,18 +16,8 @@ const NAV_ITEMS = [
   { to: '/settings', label: 'Settings' },
 ];
 
-export default function Navbar({ walletAddress, isMobile }: NavbarProps) { 
+ export default function Navbar({ walletAddress, isMobile, scrolled }: NavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 10);
-    window.addEventListener('scroll', handleScroll);
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll)
-    };
-  }, []);
 
   return (
     <header className={`topnav ${scrolled ? 'scrolled' : ''}`}>

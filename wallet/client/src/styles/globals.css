@@ -412,7 +412,7 @@ border-bottom: 1px solid var(--border); padding: var(--space-sm)
 
 /* ─── RESPONSIVE MODE OVERRIDES ───────── */
 .topnav {
-      padding-top: 16px; /* or whatever looks good */
+      padding-top: 84px; /* or whatever looks good */
       }
 
 .mobile-mode .desktop-only {
