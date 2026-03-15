@@ -25,6 +25,7 @@ export default function ConnectWallet({ onConnect }: ConnectWalletProps) {
   const [signature, setSignature] = useState<string | null>(null)
   const signingRef = useRef(false)
  const connectedOnce = useRef(false)
+  const [activeConnector, setActiveConnector] = useState<string | null>(null)
 
   // 3. Robust Disconnect Handler
   const handleDisconnect = useCallback(async () => {
@@ -109,20 +110,32 @@ export default function ConnectWallet({ onConnect }: ConnectWalletProps) {
       {/* 4. Dynamic Connector Buttons (Future-Proof: Lists whatever is in wagmiConfig) */}
       {!isConnected && (
         <div className="connector-list">
-     {connectors.map((c) => (
+    {connectors.map((c) => (
       <button
       key={c.id}
       onClick={async () => {
+      try {
       await connect({ connector: c })
+      setActiveConnector(c.id) // mark this button active
       if (address) onConnect(address)
+      } catch (err: any) {
+      // simplified error
+      console.error(err)
+      }
       }}
-      className="btn-connect"
+      className={`btn-connect ${activeConnector === c.id ? "btn-active" : ""}`}
       disabled={isPending}
       >
-      {isPending ? "Connecting..." : `Connect ${c.name}`}
+      {isPending && activeConnector === c.id ? "Connecting..." : `Connect ${c.name}`}
       </button>
       ))}
-          {connectError && <p className="error-text">{connectError.message}</p>}
+      {connectError && (
+        <p className="error-text">
+        {connectError.message.includes("User rejected") 
+        ? "User rejected the request" 
+        : "Connection failed"}
+        </p>
+        )}
         </div>
       )}
 

@@ -137,19 +137,11 @@ cursor: "pointer"
 ✕
 </button>
 <ConnectWallet onConnect={(addr: string) => setWalletAddress(addr)} />
-{walletAddress && (
-<>
-<WalletStatus connected={true} account={walletAddress} />
-<WalletAddress account={walletAddress} />
-<WalletTransactions account={walletAddress} />
-<WalletScanner account={walletAddress} connected={true} />
-</>
-)}
 </div>
 </div>,
 document.body
 )
 }
-     </div>
+ </div>
   );
 }
