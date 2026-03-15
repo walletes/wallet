@@ -42,7 +42,7 @@ export default function WalletAddress({ account, chain, healthScore }: WalletAdd
 
   /* ─── TRUNCATE ADDRESS ───────────────────────── */
   const displayAddress = account ? `${account.slice(0,6)}…${account.slice(-4)}` : "Not Connected";
-
+  const walletAgeScore = account ? account.length * 2 : 0;
   /* ─── BLOCKCHAIN EXPLORER LINK ───────────────────────── */
   const explorerUrls: Record<string, string> = {
     eth: "https://etherscan.io/address/",
@@ -82,19 +82,19 @@ export default function WalletAddress({ account, chain, healthScore }: WalletAdd
       </span>
 
       {/* Health Score badge (optional) */}
-      {healthScore !== undefined && (
+      {walletAgeScore > 0 && ( 
         <span
           className="health-badge"
           style={{
             backgroundColor: "#e0e0e0",
-            color: healthScore > 80 ? "green" : healthScore > 50 ? "orange" : "red",
+            color: walletAgeScore > 80 ? "green" : walletAgeScore > 50 ? "orange" : "red",
             borderRadius: "999px",
             padding: "2px 6px",
             fontSize: "12px",
             fontWeight: 600
           }}
         >
-          {healthScore}
+         {walletAgeScore}
         </span>
       )}
 

@@ -46,6 +46,19 @@ export default function WalletScanner({
     }
   }, [address, isConnected, account, connected, onAccountChange, onDisconnect]);
 
+  // WALLET SWITCH DETECTION
+  useEffect(() => {
+    if (!address) return
+
+  const lastAccount = localStorage.getItem("lastWallet")
+
+  if (lastAccount && lastAccount !== address) {
+  console.warn("Wallet switched:", lastAccount, "→", address)
+              }
+
+  localStorage.setItem("lastWallet", address)
+     }, [address])
+
   // 2. CHAIN WATCHER
   useEffect(() => {
     const chainId = chain?.id;
@@ -61,7 +74,12 @@ export default function WalletScanner({
 
     const interval = setInterval(async () => {
       try {
-        const publicClient = getPublicClient(config, { chainId: chain.id });
+    let publicClient
+    try {
+      publicClient = getPublicClient(config, { chainId: chain.id })
+      } catch {
+        console.warn("RPC failed, retrying...")
+        }
         if (publicClient) {
           await publicClient.getBlockNumber();
         }

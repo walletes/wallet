@@ -1,14 +1,15 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useAccount, useConnect, useDisconnect, useSignMessage } from 'wagmi'
 
 import WalletAddress from './WalletAddress'
 import WalletScanner from './WalletScanner'
 import WalletStatus from './WalletStatus'
+import WalletTransactions from './WalletTransactions'
 
 export default function ConnectWallet() {
   // 1. Core Wagmi Hooks (v2 Standard)
   const { address, isConnected, chain, status: accountStatus } = useAccount()
-  const { connect, connectors, error: connectError } = useConnect()
+  const { connect, connectors, error: connectError, isPending } = useConnect()
   const { disconnectAsync } = useDisconnect()
   const { signMessageAsync } = useSignMessage()
 
@@ -17,6 +18,7 @@ export default function ConnectWallet() {
   const [duration, setDuration] = useState(3600)
   const [timeLeft, setTimeLeft] = useState(3600)
   const [signature, setSignature] = useState<string | null>(null)
+  const signingRef = useRef(false)
 
   // 3. Robust Disconnect Handler
   const handleDisconnect = useCallback(async () => {
@@ -59,8 +61,11 @@ export default function ConnectWallet() {
   /* DYNAMIC SIGNATURE LOGIC */
   const handleSignature = useCallback(async () => {
     if (!address || signature) return
+    if (signingRef.current) return
+      signingRef.current = true
 
     const nonce = Math.floor(Math.random() * 1000000).toString()
+    localStorage.setItem("walletNonce", nonce)
     const msg = `Wallet Intelligence Login\nTimestamp: ${Date.now()}\nNonce: ${nonce}`
 
     try {
@@ -68,7 +73,9 @@ export default function ConnectWallet() {
       setSignature(sig)
     } catch (err) {
       console.error('Signature rejected:', err)
-    }
+    } finally {
+        signingRef.current = false
+        }
   }, [address, signature, signMessageAsync])
 
   /* AUTO-SIGN ON CONNECTION */
@@ -77,6 +84,18 @@ export default function ConnectWallet() {
       handleSignature()
     }
   }, [isConnected, address, signature, handleSignature])
+  /* WALLET RECONNECT RECOVERY */
+  useEffect(() => {
+    const lastWallet = localStorage.getItem("lastWallet")
+
+      if (isConnected && address) {
+      localStorage.setItem("lastWallet", address)
+            }
+
+  if (!isConnected && lastWallet) {
+  console.log("Previous wallet detected:", lastWallet)
+           }
+  }, [isConnected, address])
 
   return (
     <div className="connect-wallet-container">
@@ -84,14 +103,14 @@ export default function ConnectWallet() {
       {!isConnected && (
         <div className="connector-list">
           {connectors.map((c) => (
-            <button 
-              key={c.uid} 
-              onClick={() => connect({ connector: c })} 
-              className="btn-connect"
-              disabled={accountStatus === 'reconnecting' || accountStatus === 'connecting'}
-            >
-              {accountStatus === 'connecting' ? 'Connecting...' : `Connect ${c.name}`}
-            </button>
+           <button
+           key={c.id}
+           onClick={() => connect({ connector: c })}
+           className="btn-connect"
+           disabled={isPending}
+                   >
+          {isPending ? "Connecting..." : `Connect ${c.name}`}
+          </button>
           ))}
           {connectError && <p className="error-text">{connectError.message}</p>}
         </div>
@@ -121,6 +140,7 @@ export default function ConnectWallet() {
               stayConnected={stayConnected}
               onDisconnect={handleDisconnect}
             />
+           <WalletTransactions />
           </div>
 
           {/* 6. Robust Session Controls */}
