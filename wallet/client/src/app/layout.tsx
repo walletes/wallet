@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from "react-dom";
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import "../styles/globals.css";  
 import "../styles/animations.css"; 
@@ -113,27 +114,46 @@ export default function Layout() {
         <Outlet />
           </div>
           </PageContainer>
-   {/* ─── WALLET OVERLAY ─── */}
-   {walletOpen && (
-   <div
-   className="wallet-overlay fixed inset-0 bg-black/50 z-50 flex items-center justify-center"
-   onClick={() => setWalletOpen(false)}
-   >
-   <div
-   className="wallet-modal bg-bg-base p-6 rounded-lg relative"
-   onClick={(e) => e.stopPropagation()}
-   >
-   <ConnectWallet onConnect={(addr: string) => setWalletAddress(addr)} />
-   <WalletStatus 
-   connected={!!walletAddress} 
-   account={walletAddress} 
-   />
-   <WalletAddress account={walletAddress} />
-   <WalletTransactions account={walletAddress} />
-   <WalletScanner account={walletAddress} connected={!!walletAddress} />
-   </div>
-   </div>
-   )}
+{walletOpen &&
+createPortal(
+<div className="wallet-overlay">
+<div
+className="wallet-modal"
+onClick={(e) => e.stopPropagation()}
+>
+
+{/* CLOSE BUTTON */}
+<button
+onClick={() => setWalletOpen(false)}
+style={{
+position: "absolute",
+top: "12px",
+right: "12px",
+background: "transparent",
+border: "none",
+fontSize: "20px",
+cursor: "pointer"
+}}
+>
+✕
+</button>
+
+<ConnectWallet onConnect={(addr: string) => setWalletAddress(addr)} />
+
+{walletAddress && (
+<>
+<WalletStatus connected={true} account={walletAddress} />
+<WalletAddress account={walletAddress} />
+<WalletTransactions account={walletAddress} />
+<WalletScanner account={walletAddress} connected={true} />
+</>
+)}
+
+</div>
+</div>,
+document.body
+)
+}
      </div>
   );
 }

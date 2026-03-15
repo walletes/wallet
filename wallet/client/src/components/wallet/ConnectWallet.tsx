@@ -24,6 +24,7 @@ export default function ConnectWallet({ onConnect }: ConnectWalletProps) {
   const [timeLeft, setTimeLeft] = useState(3600)
   const [signature, setSignature] = useState<string | null>(null)
   const signingRef = useRef(false)
+ const connectedOnce = useRef(false)
 
   // 3. Robust Disconnect Handler
   const handleDisconnect = useCallback(async () => {
@@ -84,12 +85,12 @@ export default function ConnectWallet({ onConnect }: ConnectWalletProps) {
   }, [address, signature, signMessageAsync])
 
   /* AUTO-SIGN ON CONNECTION */
-  useEffect(() => {
+ useEffect(() => {
     if (isConnected && address && !signature) {
-      handleSignature()
-      onConnect(address);
-    }
-  }, [isConnected, address, signature, handleSignature, onConnect]);
+        handleSignature()
+          }
+          }, [isConnected, address, signature, handleSignature])
+ 
   /* WALLET RECONNECT RECOVERY */
   useEffect(() => {
     const lastWallet = localStorage.getItem("lastWallet")
@@ -108,16 +109,19 @@ export default function ConnectWallet({ onConnect }: ConnectWalletProps) {
       {/* 4. Dynamic Connector Buttons (Future-Proof: Lists whatever is in wagmiConfig) */}
       {!isConnected && (
         <div className="connector-list">
-          {connectors.map((c) => (
-           <button
-           key={c.id}
-           onClick={() => connect({ connector: c })}
-           className="btn-connect"
-           disabled={isPending}
-                   >
-          {isPending ? "Connecting..." : `Connect ${c.name}`}
-          </button>
-          ))}
+     {connectors.map((c) => (
+      <button
+      key={c.id}
+      onClick={async () => {
+      await connect({ connector: c })
+      if (address) onConnect(address)
+      }}
+      className="btn-connect"
+      disabled={isPending}
+      >
+      {isPending ? "Connecting..." : `Connect ${c.name}`}
+      </button>
+      ))}
           {connectError && <p className="error-text">{connectError.message}</p>}
         </div>
       )}
