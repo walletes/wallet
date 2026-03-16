@@ -4,6 +4,7 @@
  import TokenList from '../../components/dashboard/TokenList';
  import DustSummary from '../../components/dashboard/DustSummary';
  import CleanPointsCard from '../../components/dashboard/CleanPointsCard';
+ import type { Token } from '../../components/dashboard/TokenList';
 
 /* ─── DASHBOARD PAGE ───────*/
 export default function DashboardPage() {
@@ -16,7 +17,7 @@ export default function DashboardPage() {
     walletAddr:  '0x1a2b3c4d5e6f7a8b9c0d',
     healthScore: 94,
   };
-
+const tokens: Token[] = []; 
   return (
     <div
     className="dashboard-page"

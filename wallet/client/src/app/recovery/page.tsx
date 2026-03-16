@@ -115,7 +115,7 @@ export default function RecoveryPage({ walletAddress, nftHolder = false }: Recov
       {/* ── HEADER CARDS ────────────────────────────────────────── */}
       <div className="recovery-header grid grid-cols-1 md:grid-cols-2 gap-4">
        <WalletHealthCard tokens={tokens} />
-       <DustSummary tokens={tokens} />
+       <DustSummary/>
       </div>
 
       {/* NFT Auto-Swap Toggle */}

@@ -4,14 +4,14 @@ import { useState } from 'react';
 // Batch burn multiple spam tokens in a single transaction
 
 interface BatchBurnButtonProps {
+  tokens?: { id: string; symbol: string; tokenAddress: string; chainId: number }[];
   selectedIds?: string[];
   count?: number;
   disabled?: boolean;
   onSuccess?: (burnedCount: number) => void;
-  tokens?: { id: string; symbol: string; tokenAddress: string; chainId: number }[];
   onProgress?: (tokenSymbol: string, status: 'start' | 'success' | 'error') => void;
-   onComplete?: () => void;
-      }
+  onComplete?: () => void;
+  }
 
 
 export default function BatchBurnButton({
