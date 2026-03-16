@@ -41,7 +41,7 @@ export default function TokenList({
 }: TokenListProps) {
   const { address: connectedAddress, isConnected } = useAccount();
   const address = customAddress || connectedAddress;
-  const { data: native } = useBalance({ address });
+  const { data: native } = useBalance({ address: address as `0x${string}` | undefined });
 
   const [tokens, setTokens] = useState<Token[]>([]);
   const [loading, setLoading] = useState(false);
@@ -163,7 +163,7 @@ export default function TokenList({
             <select
               className="tl-sort"
               value={sortBy as "value" | "name"}
-              onChange={(e) => setSortBy(e.target.value)}
+              onChange={(e) => setSortBy(e.target.value as "value" | "name")}
             >
               <option value="value">By Value</option>
               <option value="name">By Name</option>

@@ -1,0 +1,1197 @@
+ 
+  /* ========================================================================== */
+
+
+/* --------------------------------------------------------------------------
+   PAGE LAYOUT
+   -------------------------------------------------------------------------- */
+
+.settings-page {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  padding-bottom: 80px;
+}
+
+.settings-page-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-eyebrow {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.settings-title {
+  font-family: var(--font-display);
+  font-size: clamp(36px, 5vw, 52px);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+  line-height: 1;
+  margin: 0;
+}
+
+.settings-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+
+/* --------------------------------------------------------------------------
+   SIDE NAV
+   Zerion: vertical tab strip — active item has accent left-edge indicator
+   -------------------------------------------------------------------------- */
+
+.settings-nav {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: sticky;
+  top: 88px;
+}
+
+.settings-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  font-family: var(--font-body);
+  position: relative;
+  transition: background var(--transition-fast);
+}
+
+.settings-nav-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.settings-nav-item--active {
+  background: var(--accent-dim);
+}
+
+.settings-nav-item--danger:hover {
+  background: rgba(255, 77, 106, 0.08);
+}
+
+.settings-nav-item--danger.settings-nav-item--active {
+  background: rgba(255, 77, 106, 0.1);
+}
+
+.settings-nav-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+  width: 20px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.settings-nav-item--active   .settings-nav-icon { color: var(--accent); }
+.settings-nav-item--danger   .settings-nav-icon { color: var(--red);    }
+
+.settings-nav-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-nav-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.settings-nav-item--active .settings-nav-label { color: var(--accent); }
+.settings-nav-item--danger .settings-nav-label { color: var(--red);    }
+
+.settings-nav-desc {
+  font-size: 10px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.settings-nav-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--red);
+  color: #fff;
+  flex-shrink: 0;
+}
+
+
+/* --------------------------------------------------------------------------
+   PANEL
+   Zerion: glassy card container, full rounded corners, subtle border
+   -------------------------------------------------------------------------- */
+
+.settings-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.settings-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.settings-panel-header {
+  padding: 20px 28px;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-panel-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 4px;
+}
+
+.settings-panel-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+
+/* --------------------------------------------------------------------------
+   SETTING ROWS
+   Tesla: generous horizontal padding, nothing touching
+   -------------------------------------------------------------------------- */
+
+.settings-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 28px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.setting-row:last-child {
+  border-bottom: none;
+}
+
+.setting-row-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.setting-row-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.setting-row-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.setting-row-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* Section divider inside panel */
+.settings-section-divider {
+  padding: 8px 28px;
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+
+/* --------------------------------------------------------------------------
+   TOGGLE
+   Zerion: spring thumb, cyan when on
+   -------------------------------------------------------------------------- */
+
+.toggle-wrap {
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--transition-spring), border-color var(--transition-spring);
+}
+
+.toggle-wrap--on {
+  background: var(--accent-dim);
+  border-color: var(--border-accent);
+}
+
+.toggle-wrap--disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.toggle-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--text-secondary);
+  transition: transform var(--transition-spring), background var(--transition-spring);
+}
+
+.toggle-wrap--on .toggle-thumb {
+  transform: translateX(20px);
+  background: var(--accent);
+}
+
+
+/* --------------------------------------------------------------------------
+   CHIP GROUP
+   Zerion: pill-shaped single-select options
+   -------------------------------------------------------------------------- */
+
+.chip-group {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.chip-btn {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.chip-btn:hover:not(:disabled) {
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.chip-btn--active {
+  background: var(--accent-dim);
+  border-color: var(--border-accent);
+  color: var(--accent);
+}
+
+.chip-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+
+/* --------------------------------------------------------------------------
+   RANGE SLIDER
+   Zerion: accent-colored thumb, dark track
+   -------------------------------------------------------------------------- */
+
+.slider-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.settings-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 160px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  outline: none;
+  cursor: pointer;
+}
+
+.settings-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(0, 212, 255, 0.4);
+  transition: box-shadow var(--transition-fast);
+}
+
+.settings-slider::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 16px rgba(0, 212, 255, 0.6);
+}
+
+.settings-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 8px rgba(0, 212, 255, 0.4);
+}
+
+.slider-value {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  min-width: 38px;
+  text-align: right;
+}
+
+
+/* --------------------------------------------------------------------------
+   TEXT INPUTS & SELECT
+   -------------------------------------------------------------------------- */
+
+.settings-input {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: var(--font-mono);
+  outline: none;
+  width: 200px;
+  transition: border-color var(--transition-fast);
+}
+
+.settings-input:focus {
+  border-color: var(--border-accent);
+}
+
+.settings-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.settings-input--wide  { width: 260px; }
+.settings-input--short { width: 90px; text-align: right; }
+
+.settings-select {
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-family: var(--font-body);
+  outline: none;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.settings-select:focus {
+  border-color: var(--border-accent);
+  color: var(--text-primary);
+}
+
+
+/* --------------------------------------------------------------------------
+   WALLET CHIP — address display row
+   -------------------------------------------------------------------------- */
+
+.wallet-address-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.wallet-address-text {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+
+/* --------------------------------------------------------------------------
+   CHAINS PANEL
+   Zerion: per-chain row with coloured badge, stats, toggle
+   -------------------------------------------------------------------------- */
+
+.chains-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.chain-row {
+  display: grid;
+  grid-template-columns: 128px 1fr auto auto;
+  align-items: center;
+  gap: 24px;
+  padding: 16px 28px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  transition: background var(--transition-fast);
+}
+
+.chain-row:last-child { border-bottom: none; }
+.chain-row:hover      { background: rgba(255, 255, 255, 0.02); }
+
+/* Zerion chain badge pill */
+.chain-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.chain-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Per-chain colour tokens — exact Zerion brand values */
+.chain-badge--eth      { background: rgba(98,  126, 234, 0.14); color: #627eea; border-color: rgba(98,  126, 234, 0.25); }
+.chain-badge--polygon  { background: rgba(130,  71, 229, 0.14); color: #8247e5; border-color: rgba(130,  71, 229, 0.25); }
+.chain-badge--arbitrum { background: rgba(45,  156, 219, 0.14); color: #2d9cdb; border-color: rgba(45,  156, 219, 0.25); }
+.chain-badge--base     { background: rgba(0,    82, 255, 0.14); color: #0052ff; border-color: rgba(0,    82, 255, 0.25); }
+.chain-badge--optimism { background: rgba(255,   4,  32, 0.12); color: #ff0420; border-color: rgba(255,   4,  32, 0.22); }
+.chain-badge--solana   { background: rgba(153,  69, 255, 0.14); color: #9945ff; border-color: rgba(153,  69, 255, 0.25); }
+
+.chain-badge--eth      .chain-dot { background: #627eea; }
+.chain-badge--polygon  .chain-dot { background: #8247e5; }
+.chain-badge--arbitrum .chain-dot { background: #2d9cdb; }
+.chain-badge--base     .chain-dot { background: #0052ff; }
+.chain-badge--optimism .chain-dot { background: #ff0420; }
+.chain-badge--solana   .chain-dot { background: #9945ff; }
+
+.chain-rpc {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.chain-stats {
+  display: flex;
+  gap: 28px;
+}
+
+.chain-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chain-stat-value {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.chain-stat-value--positive { color: var(--green); }
+
+.chain-stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.chain-inactive-label {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  min-width: 56px;
+}
+/* -----------------
+   FEES PANEL — stats overview strip
+   ----------------- */
+
+.fees-stats-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  padding: 20px 28px;
+  border-bottom: 1px solid var(--border);
+}
+
+.fee-stat-card {
+  padding: 16px 18px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fee-stat-value {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.fee-stat-value--positive { color: var(--green);  }
+.fee-stat-value--negative { color: var(--red);    }
+.fee-stat-value--accent   { color: var(--accent); }
+
+.fee-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+/* Unit suffix next to value */
+.unit-suffix {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-left: 2px;
+}
+
+
+/* --------------------------------------------------------------------------
+   NFT PASS PANEL
+   Zerion glass card + Tesla Bebas tier name
+   -------------------------------------------------------------------------- */
+
+.nft-pass-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 36px;
+  padding: 28px;
+  align-items: start;
+}
+
+.nft-pass-card {
+  position: relative;
+  background: linear-gradient(140deg, #0d1525 0%, #13131f 50%, #1a1030 100%);
+  border: 1px solid var(--border-accent);
+  border-radius: 20px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow: hidden;
+  box-shadow:
+    0 0 40px rgba(0, 212, 255, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* Ambient glow blobs */
+.nft-pass-glow-1 {
+  position: absolute;
+  top: -70px;
+  right: -70px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 212, 255, 0.18) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.nft-pass-glow-2 {
+  position: absolute;
+  bottom: -50px;
+  left: -40px;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(153, 69, 255, 0.14) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.nft-pass-eyebrow {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  position: relative;
+  z-index: 1;
+}
+
+.nft-pass-tier {
+  font-family: var(--font-display);
+  font-size: 48px;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+  line-height: 1;
+  position: relative;
+  z-index: 1;
+}
+
+.nft-pass-id {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-tertiary);
+  position: relative;
+  z-index: 1;
+  margin-top: -10px;
+}
+
+.nft-pass-perks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+  position: relative;
+  z-index: 1;
+}
+
+.nft-perk-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nft-perk-icon {
+  width: 20px;
+  text-align: center;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.nft-perk-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* Info column */
+.nft-pass-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.nft-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  gap: 20px;
+}
+
+.nft-info-row:last-child { border-bottom: none; }
+
+.nft-info-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.nft-info-sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 3px;
+}
+
+.nft-info-value {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.tier-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--accent-dim);
+  color: var(--accent);
+  border: 1px solid var(--border-accent);
+}
+
+.nft-upgrade-box {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.nft-upgrade-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.nft-upgrade-text strong { color: var(--accent); }
+
+
+/* --------------------------------------------------------------------------
+   API PANEL
+   -------------------------------------------------------------------------- */
+
+.api-key-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+
+.api-key-text {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* Rate limit bar */
+.rate-limit-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.rate-limit-value {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.rate-limit-bar-track {
+  width: 140px;
+  height: 4px;
+  background: var(--bg-elevated);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.rate-limit-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+}
+
+.rate-limit-sub {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+/* Code block */
+.code-preview-wrap {
+  margin: 4px 28px 28px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.code-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid var(--border);
+}
+
+.code-preview-title {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.code-preview-lang {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.code-preview-block {
+  margin: 0;
+  padding: 16px 18px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.75;
+  color: var(--text-secondary);
+  background: rgba(0, 0, 0, 0.2);
+  overflow-x: auto;
+  white-space: pre;
+}
+
+
+/* --------------------------------------------------------------------------
+   DANGER ZONE PANEL
+   -------------------------------------------------------------------------- */
+
+.danger-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.danger-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 28px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  gap: 28px;
+  flex-wrap: wrap;
+}
+
+.danger-row:last-child   { border-bottom: none; }
+.danger-row--destructive { background: rgba(255, 77, 106, 0.03); }
+
+.danger-row-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.danger-row-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.danger-row-label--red { color: var(--red); }
+
+.danger-row-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* Soft danger button */
+.btn-danger-soft {
+  padding: 9px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+
+.btn-danger-soft:hover {
+  border-color: var(--red);
+  color: var(--red);
+  background: rgba(255, 77, 106, 0.07);
+}
+
+/* Hard danger button */
+.btn-danger-hard {
+  padding: 9px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 77, 106, 0.3);
+  background: var(--red-dim);
+  color: var(--red);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+
+.btn-danger-hard:hover:not(:disabled) {
+  background: rgba(255, 77, 106, 0.22);
+  box-shadow: 0 0 20px rgba(255, 77, 106, 0.2);
+}
+
+.btn-danger-hard:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+
+/* --------------------------------------------------------------------------
+   CONFIRM MODAL
+   -------------------------------------------------------------------------- */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.modal-panel {
+  width: 100%;
+  max-width: 420px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-shadow: 0 28px 72px rgba(0, 0, 0, 0.65);
+  animation: modal-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes modal-pop {
+  from { opacity: 0; transform: scale(0.9) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0);       }
+}
+
+.modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.modal-desc {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.65;
+  margin: 0;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding-top: 6px;
+}
+
+
+/* --------------------------------------------------------------------------
+   SHARED BUTTONS (used across all panels)
+   -------------------------------------------------------------------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-base);
+  text-decoration: none;
+}
+
+.btn--primary {
+  background: var(--accent);
+  color: #000;
+  padding: 10px 24px;
+  font-size: 13px;
+}
+
+.btn--primary:hover {
+  box-shadow: 0 0 28px rgba(0, 212, 255, 0.35);
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  padding: 9px 20px;
+  font-size: 13px;
+}
+
+.btn--ghost:hover {
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.btn--sm {
+  padding: 7px 16px;
+  font-size: 12px;
+}
+
+.btn--success {
+  background: var(--green-dim);
+  color: var(--green);
+  border: 1px solid rgba(0, 232, 122, 0.25);
+  padding: 9px 20px;
+  font-size: 13px;
+}
+
+
+/* --------------------------------------------------------------------------
+   LIVE PULSE DOT
+   -------------------------------------------------------------------------- */
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.pulse-dot::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: var(--green);
+  opacity: 0.3;
+  animation: pulse-ring 2s ease-in-out infinite;
+}
+
+@keyframes pulse-ring {
+  0%, 100% { transform: scale(1);   opacity: 0.3; }
+  50%       { transform: scale(1.7); opacity: 0;   }
+}
+
+
+/* --------------------------------------------------------------------------
+   RESPONSIVE — TABLET 1024px
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 1024px) {
+
+  .settings-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-nav {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 8px;
+    gap: 4px;
+  }
+
+  .settings-nav-item {
+    flex: 0 0 auto;
+    padding: 8px 14px;
+  }
+
+  .settings-nav-desc  { display: none; }
+
+  .chain-row          { grid-template-columns: 128px 1fr auto; }
+  .chain-stats        { display: none; }
+
+  .nft-pass-layout    { grid-template-columns: 1fr; }
+  .fees-stats-strip   { grid-template-columns: 1fr; gap: 10px; }
+}
+
+
+/* --------------------------------------------------------------------------
+   RESPONSIVE — MOBILE 640px
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 640px) {
+
+  .setting-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 20px;
+  }
+
+  .setting-row-control { align-self: flex-start; }
+
+  .settings-panel-header { padding: 16px 20px; }
+
+  .settings-input,
+  .settings-input--wide { width: 100%; }
+
+  .danger-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px 20px;
+  }
+
+  .nft-pass-layout   { padding: 20px; }
+  .nft-pass-card     { width: 100%; }
+
+  .code-preview-wrap { margin: 4px 20px 20px; }
+
+  .modal-panel       { padding: 24px; }
+
+  .settings-slider   { width: 120px; }
+}
