@@ -8,7 +8,11 @@ interface BatchBurnButtonProps {
   count?: number;
   disabled?: boolean;
   onSuccess?: (burnedCount: number) => void;
-}
+  tokens?: { id: string; symbol: string; tokenAddress: string; chainId: number }[];
+  onProgress?: (tokenSymbol: string, status: 'start' | 'success' | 'error') => void;
+   onComplete?: () => void;
+      }
+
 
 export default function BatchBurnButton({
   selectedIds = [],

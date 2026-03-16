@@ -6,6 +6,7 @@ import WalletHealthCard from '../../components/dashboard/WalletHealthCard';
 import DustSummary from '../../components/dashboard/DustSummary';
 import "../../styles/components.css";
 import { useTokens } from '../../hooks/useTokens';
+import TokenList from '../../components/dashboard/TokenList';
 import { executeManualSwap, executeAutoSwap } from '../../services/tokenService';
 
 // ─── TYPES ────────────────────────────────────────────────────────────
@@ -39,7 +40,7 @@ export default function RecoveryPage({ walletAddress, nftHolder = false }: Recov
   const [swapStatus, setSwapStatus] = useState<'idle' | 'swapping' | 'done' | 'error'>('idle');
 
   const spamTokens = tokens.filter(t => t.isSpam);
-  const dustTokens = tokens.filter(t => t.balance > 0 && !t.isSpam);
+  const dustTokens = tokens.filter(t => Number(t.balance) > 0 && !t.isSpam);
 
   const allVisibleSelected = tokens.length > 0 && tokens.every(t => selected.has(t.id));
 
@@ -48,7 +49,7 @@ export default function RecoveryPage({ walletAddress, nftHolder = false }: Recov
   const selectedValue = selectedItems.reduce((sum, t) => sum + t.usdValue, 0);
   const dustTotal = dustTokens.reduce((sum, t) => sum + t.usdValue, 0);
   const spamCount = spamTokens.length;
-  const zeroCount = tokens.filter(t => t.balance === 0).length;
+  const zeroCount = tokens.filter(t => Number(t.balance) === 0).length;
 
   const toggle = (id: string) => setSelected(prev => {
     const n = new Set(prev);
@@ -113,8 +114,8 @@ export default function RecoveryPage({ walletAddress, nftHolder = false }: Recov
 
       {/* ── HEADER CARDS ────────────────────────────────────────── */}
       <div className="recovery-header grid grid-cols-1 md:grid-cols-2 gap-4">
-        <WalletHealthCard tokens={tokens} />
-        <DustSummary tokens={tokens} />
+       <WalletHealthCard tokens={tokens} />
+       <DustSummary tokens={tokens} />
       </div>
 
       {/* NFT Auto-Swap Toggle */}
@@ -149,8 +150,8 @@ export default function RecoveryPage({ walletAddress, nftHolder = false }: Recov
       <div className="recovery-tokenlist my-6">
         <TokenList
           selectable
-          selectedIds={Array.from(selected)}
-          onSelect={handleToggle => toggle(handleToggle)}
+         selectedIds={Array.from(selected)}
+         onSelect={(id: string) => toggle(id)}
         />
       </div>
 

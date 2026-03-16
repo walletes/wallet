@@ -153,7 +153,7 @@ export default function TokenList({
                 <button
                   key={tab.id}
                   className={`tl-tab ${filter === tab.id ? "active" : ""}`}
-                  onClick={() => setFilter(tab.id)}
+                  onClick={() => setFilter(tab.id as "all" | "clean" | "spam")}
                 >
                   {tab.label}
                 </button>
@@ -162,7 +162,7 @@ export default function TokenList({
 
             <select
               className="tl-sort"
-              value={sortBy}
+              value={sortBy as "value" | "name"}
               onChange={(e) => setSortBy(e.target.value)}
             >
               <option value="value">By Value</option>

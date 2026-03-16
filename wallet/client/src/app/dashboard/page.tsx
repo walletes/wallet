@@ -93,11 +93,11 @@ export default function DashboardPage() {
       {/* ── MAIN GRID ───── */}
      <div className="dashboard-grid">
         <div className="dashboard-col-main">
-          <TokenList />
+      <TokenList tokens={[]} />
         </div>
 
         <div className="dashboard-col-side">
-          <WalletHealthCard />
+        <WalletHealthCard tokens={tokens} />
           <DustSummary />
           <CleanPointsCard />
         </div>
