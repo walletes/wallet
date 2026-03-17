@@ -64,8 +64,8 @@ export default function WalletHealthCard({ tokens }: Props) {
       : 'var(--red)';
 
   return (
-    <div className="whc-card card animate-slide-up stagger-2">
-      <div className="whc-header">
+  <div className="whc-card card animate-slide-up stagger-2" style={{ alignItems: 'center', textAlign: 'center' }}>
+ <div className="whc-header" style={{ width: '100%', marginBottom: 'var(--space-sm)' }}>
         <span className="label-eyebrow">Wallet Health</span>
         <div className="whc-score-badge" style={{ color, background: `${color}18` }}>
           {safeScore}
@@ -73,7 +73,7 @@ export default function WalletHealthCard({ tokens }: Props) {
       </div>
 
       {/* Ring indicator */}
-      <div className="whc-ring-wrapper">
+  <div className="whc-ring-wrapper" style={{ margin: 'var(--space-md) auto' }}>
         <svg className="whc-ring" viewBox="0 0 120 120" width="120" height="120">
           <circle cx="60" cy="60" r="50" fill="none" stroke="var(--bg-elevated)" strokeWidth="8" />
           <circle
@@ -89,23 +89,23 @@ export default function WalletHealthCard({ tokens }: Props) {
             style={{ transition: 'stroke-dasharray 1s cubic-bezier(0.34,1.1,0.64,1)' }}
           />
         </svg>
-        <div className="whc-ring-label">
+   <div className="whc-ring-label" style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
           <span className="whc-ring-score mono-value" style={{ color }}>{safeScore}</span>
           <span className="whc-ring-max">/100</span>
         </div>
       </div>
 
       {/* Breakdown bars */}
-      <div className="whc-breakdown">
+   <div className="whc-breakdown" style={{ width: '100%', marginTop: 'var(--space-sm)' }}>
         {items.map(item => (
-          <div key={item.label} className="whc-item">
+   <div key={item.label} className="whc-item" style={{ gap: 'var(--space-xs)' }}>
             <div className="whc-item-header">
               <span className="whc-item-label">{item.label}</span>
               <span className="whc-item-score mono-value" style={{ color: item.color }}>
                 {item.score}
               </span>
             </div>
-            <div className="health-bar-track">
+         <div className="health-bar-track" style={{ height: '6px' }}>
               <div
                 className="health-bar-fill"
                 style={{ width: `${item.score}%`, background: item.color }}

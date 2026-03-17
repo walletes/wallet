@@ -25,7 +25,10 @@ const tokens: Token[] = [
   return (
     <div
     className="dashboard-page"
-    style={{ flex: 1, display: 'flex', flexDirection: 'column', width: '100%' }}
+    style={{ flex: 1, width: '100%',
+      padding: 'var(--space-xl)', 
+      boxSizing: 'border-box'    
+    }}
       >
       {/* ── PORTFOLIO HERO (Zerion DNA — giant center-stage value) ── */}
       <section className="portfolio-hero anim-fade-up">
@@ -74,7 +77,7 @@ const tokens: Token[] = [
       </section>
 
       {/* ── STAT RAIL (Tesla DNA) ────────── */}
-      <section className="dashboard-stats card anim-fade-up delay-1">
+     <section className="dashboard-stats card anim-fade-up delay-1" style={{ marginBottom: 'var(--space-md)' }}>
         <div className="stat-rail">
           <div className="stat-rail-item">
             <div className="stat-rail-value mono-value pnl-positive">$847.20</div>
@@ -116,6 +119,7 @@ const styles = `
 display: flex;
 flex-direction: column;
 gap: var(--space-xl);
+align-items: stretch;
 }
 
 /* ─── PORTFOLIO HERO ─── */
@@ -123,6 +127,13 @@ gap: var(--space-xl);
 display: flex;
 flex-direction: column;
 gap: var(--space-lg);
+margin-bottom: var(--space-md);
+}
+.card {
+padding: var(--space-lg); 
+display: flex;     
+flex-direction: column;  
+gap: var(--space-md);  
 }
 
 .portfolio-hero-inner {
@@ -219,14 +230,14 @@ padding: var(--space-md) var(--space-xl);
 display: grid;
 grid-template-columns: 1fr 320px;
 gap: var(--space-xl);
-align-items: start;
+align-items: stretch;
 }
 
 .dashboard-col-main,
 .dashboard-col-side {
 display: flex;
 flex-direction: column;
-gap: var(--space-lg);
+gap: var(--space-xl); 
 }
 
 /* ─── RESPONSIVE ─── */

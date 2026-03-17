@@ -109,7 +109,7 @@ export default function TokenList({
     }
   }, [address, isConnected, native, externalTokens, customAddress, onTokensChange]);
 
-  // ── AUTO REFRESH ────────────────────────────────
+  // ── AUTO REFRESH ───
   useEffect(() => {
     fetchTokens();
 
@@ -151,8 +151,8 @@ export default function TokenList({
   };
 
   return (
-    <div className="tl-container card">
-      <div className="tl-header">
+   <div className="tl-container card" style={{ gap: 'var(--space-lg)' }}>
+   <div className="tl-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 'var(--space-md)', flexWrap: 'wrap' }}>
         <span className="label-eyebrow">
           {address
             ? loading
@@ -193,7 +193,7 @@ export default function TokenList({
         )}
       </div>
 
-      <div className="tl-col-labels">
+  <div className="tl-col-labels" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 'var(--space-md)', padding: '0 var(--space-sm)' }}>
         <span>Token</span>
         <span>Balance</span>
         <span>Value</span>
@@ -202,7 +202,7 @@ export default function TokenList({
 
       <div className="divider" />
 
-      <div className="tl-list">
+  <div className="tl-list" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
         {loading && <div style={{ padding: "1rem" }}>Loading tokens...</div>}
         {error && <div style={{ padding: "1rem", color: "red" }}>{error}</div>}
 
@@ -220,9 +220,10 @@ export default function TokenList({
                 } animate-slide-up stagger-${Math.min(i + 1, 8)} ${
                   selectable && isSelected ? "selected" : ""
                 }`}
+          style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', alignItems: 'center', gap: 'var(--space-md)', padding: 'var(--space-sm) 0' }}
                 onClick={() => handleSelect(token?.id)}
               >
-                <div className="tl-token-info">
+       <div className="tl-token-info" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
                   <div className="token-icon">
                     {token?.logo ? (
                       <img

@@ -2,34 +2,34 @@ import React, { useEffect } from 'react';
 
 // ─── DUST SUMMARY CARD ───────────────────────────────────────────────
 export function DustSummary({ totalDust = '$847.20', dustTokens = MOCK_DUST }) {
-  // ✅ SAFETY: ensure array
+  // SAFETY: ensure array
   const safeDustTokens = Array.isArray(dustTokens) ? dustTokens : [];
 
   return (
-    <div className="ds-card card animate-slide-up stagger-3">
-      <div className="ds-header">
+  <div className="ds-card card animate-slide-up stagger-3" style={{ gap: 'var(--space-lg)' }}>
+ <div className="ds-header" style={{ alignItems: 'center', gap: 'var(--space-md)' }}>
         <span className="label-eyebrow">Recoverable Dust</span>
         <span className="ds-total mono-value pnl-positive">{totalDust}</span>
       </div>
 
       <div className="divider" />
 
-      <div className="ds-list">
+   <div className="ds-list" style={{ gap: 'var(--space-md)' }}>
         {safeDustTokens.map(token => (
-          <div key={token.id} className="ds-row">
-            <div className="ds-token">
+<div key={token.id} className="ds-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-md)', padding: 'var(--space-sm) 0' }}>
+  <div className="ds-token" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)', flex: 1, minWidth: 0, }} >
               <span className={`chain-badge chain-${token.chain}`}>
                 <span className="chain-dot" />
                 {token.chain}
               </span>
               <span className="ds-symbol">{token.symbol}</span>
             </div>
-            <span className="ds-value mono-value pnl-positive">{token.value}</span>
+          <span className="ds-value mono-value pnl-positive" style={{ minWidth: '90px', textAlign: 'right', flexShrink: 0, }} >{token.value}</span>
           </div>
         ))}
       </div>
 
-      <button className="btn btn-primary w-full" style={{ marginTop: 'var(--space-sm)' }}>
+    <button className="btn btn-primary w-full" style={{ marginTop: 'var(--space-md)' }}>
         Recover All Dust
       </button>
     </div>
@@ -45,14 +45,14 @@ const MOCK_DUST = [
 
 // ─── CLEAN POINTS CARD ───────────────────────────────────────────────
 export function CleanPointsCard({ points = 2480, level = 'Diamond', nextLevel = 3000 }) {
-  // ✅ SAFETY: prevent NaN / divide issues
+  // SAFETY: prevent NaN / divide issues
   const safePoints = Number(points) || 0;
   const safeNext = Number(nextLevel) || 1;
 
   const pct = Math.max(0, Math.min(100, Math.round((safePoints / safeNext) * 100)));
 
   return (
-    <div className="cp-card card animate-slide-up stagger-4">
+  <div className="cp-card card animate-slide-up stagger-4" style={{ gap: 'var(--space-lg)' }}>
       <div className="cp-header">
         <span className="label-eyebrow">Clean Points</span>
         <span className="cp-level">{level}</span>
@@ -78,9 +78,9 @@ export function CleanPointsCard({ points = 2480, level = 'Diamond', nextLevel = 
         </div>
       </div>
 
-      <div className="cp-actions-grid">
+   <div className="cp-actions-grid" style={{ marginTop: 'var(--space-sm)' }}>
         {CP_ACTIONS.map(a => (
-          <div key={a.id} className="cp-action">
+    <div key={a.id} className="cp-action" style={{ padding: 'var(--space-sm)' }}>
             <span className="cp-action-icon">{a.icon}</span>
             <span className="cp-action-label">{a.label}</span>
             <span className="cp-action-pts mono-value pnl-positive">+{a.pts}</span>
