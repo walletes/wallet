@@ -271,20 +271,60 @@ var(--green); }
 var(--red-dim); color: var(--red); }
 
  /* ─── STAT RAIL (Tesla DNA) ─────── */ 
- .stat-rail { display: flex; align-items: center; gap: 0; } 
-.stat-rail-item { padding: 16px var(--space-xl); border-right: 1px solid 
-var(--border); flex: 1; } 
-.stat-rail-item:first-child { 
-padding-left: 0; } 
-.stat-rail-item:last-child { border-right: 
-none; } 
-.stat-rail-value { font-family: var(--font-mono); 
-font-size: 22px; font-weight: 600; font-variant-numeric: 
-tabular-nums; color: var(--text-primary); line-height: 1; } 
-.stat-rail-label { font-size: 11px; font-weight: 500; 
-letter-spacing: 0.08em; text-transform: uppercase; color: 
-var(--text-secondary); margin-top: 4px; }
+.stat-rail { display: flex; align-items: center; gap: 0; }
 
+  .stat-rail-item { 
+  display: inline-flex;  
+  align-items: center; 
+  gap: 6px;   /* horizontal spacing between value & label */
+  padding: 16px var(--space-xl); 
+  border-right: 1px solid var(--border); 
+  flex: none;   /* let items shrink naturally */
+  }
+
+  .stat-rail-item:first-child { padding-left: 0; } 
+  .stat-rail-item:last-child { border-right: none; }
+
+  .stat-rail-value { 
+  font-family: var(--font-mono); 
+  font-size: 22px; 
+  font-weight: 600; 
+  font-variant-numeric: tabular-nums; 
+  color: var(--text-primary); 
+  line-height: 1; 
+  white-space: nowrap; 
+  }
+
+  .stat-rail-label { 
+  font-size: 13px;  
+  font-weight: 400; 
+  text-transform: none;  
+  color: var(--text-secondary); 
+  margin-top: 0;  
+  }
+
+ .art-stats-row {
+  display: flex;
+  flex-direction: column; 
+  gap: 6px; 
+  }
+
+  .art-stat {
+  display: inline-flex;   
+  align-items: baseline;
+  gap: 6px;  
+  }
+
+  .art-stat-label {
+  text-transform: none;  
+  font-weight: 400;
+  color: var(--text-secondary);
+  margin-top: 0;
+  }
+ .art-status {
+    margin-left: 4px; /* or var(--space-xs) */
+    }
+ 
  /* ─── TOGGLE (Zerion DNA───── */ 
 .toggle-track { width: 44px; height: 24px; border-radius: 
 var(--radius-pill); background: var(--bg-elevated); border: 1px 
@@ -480,3 +520,40 @@ min-width: 0;
 width: 100%;
 margin: 0;
 }
+/* ─── CHIP GROUP ─── */
+.art-chip-group {
+display: flex;
+flex-wrap: wrap;              /* wrap pills to new line if needed */
+gap: var(--space-sm);         /* spacing between pills */
+margin-top: 6px;              /* spacing below label/description */
+}
+
+/* ─ INDIVIDUAL CHIP / PILL─ */
+.art-chip {
+padding: 6px 14px;  
+border-radius: var(--radius-pill);
+border: 1px solid var(--border);
+background: var(--bg-card);
+cursor: pointer;
+font-size: 13px;
+font-weight: 500;
+transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+white-space: nowrap;   
+}
+
+.art-chip:hover {
+ border-color: var(--border-hover);
+ background: var(--bg-card-hover);
+    }
+/* ─── ACTIVE CHIP ───────── */
+ .art-chip--active {
+ background: var(--accent);    /* electric cyan */
+ color: #000;                  /* dark text for contrast */
+ border-color: var(--accent);
+          }
+
+ /* ─── OPTIONAL: DISABLE UNCLICKABLE CHIP ───────── */
+ .art-chip:disabled {
+ opacity: 0.4;
+ cursor: not-allowed;
+              }

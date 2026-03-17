@@ -14,7 +14,7 @@ export default function AutomationPage() {
         </div>
         <div className="automation-status">
           <div className="pulse-dot" />
-          <span style={{ fontSize: 13, color: 'var(--green)' }}>3 rules active</span>
+          <span style={{ fontSize: 18, color: 'var(--green)' }}>3 rules active</span>
         </div>
       </div>
 
@@ -120,22 +120,69 @@ function AutoScoreRule() {
 
 /* ─── STYLES ────────────────────────────────────────────────────────── */
 const styles = `
-.automation-page { display: flex; flex-direction: column; gap: var(--space-xl); }
+.automation-page {
+ display: flex;
+ flex-direction: column;
+ gap: calc(var(--space-xl) + 8px);
+ padding: var(--space-lg);
+                 }
+
+
 .page-header { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: var(--space-md); }
 .automation-status { display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-sm) var(--space-md); background: var(--green-dim); border: 1px solid rgba(0,232,122,0.2); border-radius: var(--radius-pill); }
-.auto-stats { padding: var(--space-md) var(--space-xl); }
-.automation-grid { display: grid; grid-template-columns: 380px 1fr; gap: var(--space-xl); align-items: start; }
+.auto-stats {
+  padding: calc(var(--space-md) + 6px) var(--space-xl); }
+
+.automation-grid {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: calc(var(--space-xl) + 12px);
+  align-items: start;
+                 }
+
 .automation-rules { display: flex; flex-direction: column; gap: var(--space-lg); }
-.rules-panel { display: flex; flex-direction: column; overflow: hidden; }
+.rules-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  gap: var(--space-sm);
+              }
+
 .rules-header { display: flex; align-items: center; justify-content: space-between; padding: var(--space-lg); }
 .rules-list { display: flex; flex-direction: column; }
-.rule-row { display: flex; align-items: center; justify-content: space-between; padding: var(--space-md) var(--space-lg); gap: var(--space-lg); }
-.rule-info { display: flex; align-items: center; gap: var(--space-md); }
+.rule-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(var(--space-md) + 4px) var(--space-lg);
+  gap: calc(var(--space-lg) + 4px);
+  min-height: 64px;
+          }
+
+.rule-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex: 1;
+  min-width: 0;
+           }
+
 .rule-icon { font-size: 20px; color: var(--accent); flex-shrink: 0; }
 .rule-title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
 .rule-desc { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
-.schedule-card { padding: var(--space-lg); display: flex; flex-direction: column; gap: var(--space-md); }
-.schedule-options { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-sm); }
+.schedule-card {
+  padding: calc(var(--space-lg) + 4px);
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space-md) + 4px);
+               }
+
+.schedule-options {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-md);
+                  }
+
 .schedule-opt { padding: 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg-elevated); color: var(--text-secondary); font-size: 12px; font-weight: 600; cursor: pointer; transition: all var(--transition-fast); font-family: var(--font-body); }
 .schedule-opt:hover { border-color: var(--border-hover); color: var(--text-primary); }
 .schedule-opt.active { background: var(--accent-dim); border-color: var(--border-accent); color: var(--accent); }

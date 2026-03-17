@@ -31,7 +31,7 @@ const SCHEDULES: { id: Schedule; label: string; desc: string }[] = [
 {id: 'weekly', label: 'Weekly', desc: '7d'}
 ]
 
-const MIN_DUST_OPTIONS = [0.01, 0.10, 1.00, 5.00]
+const MIN_DUST_OPTIONS = [0.1, 0.50, 1.00, 5.00]
 const TARGET_TOKENS = ['ETH', 'USDC', 'USDT', 'WBTC']
 
 const DEFAULT_CONFIG: AutoRecoveryConfig = {
@@ -98,10 +98,10 @@ return (
 <div className="art-title-block">
 <span className="art-title">Auto Dust Recovery</span>
 <span className={`art-status ${config.enabled ? 'art-status--on' : 'art-status--off'}`}>
-{config.enabled
-? `Running ${SCHEDULES.find(s => s.id === config.schedule)?.label.toLowerCase()}`
-: 'Paused — click to enable'}
-</span>
+      {config.enabled
+       ? `Running ${SCHEDULES.find(s => s.id === config.schedule)?.label.toLowerCase()}`
+      : 'Paused click to enable'}
+       </span>
 </div>
 <button
 className={`toggle-track ${config.enabled ? 'on' : ''}`}
@@ -157,19 +157,17 @@ aria-expanded={expanded}
 <span className="art-config-label">Schedule</span>
 <span className="art-config-desc">How often to scan and recover dust</span>
 </div>
-<div className="art-chip-group">
-{SCHEDULES.map(s => (
-<button
-key={s.id}
-className={`art-chip ${config.schedule === s.id ? 'art-chip--active' : ''}`}
-onClick={() => update({ schedule: s.id })}
-disabled={!config.enabled}
-title={s.desc}
->
-{s.label}
-</button>
-))}
-</div>
+ <div className="art-chip-group">
+     {SCHEDULES.map(s => (
+      <button
+       key={s.id}
+        className={`art-chip ${config.schedule === s.id ? 'art-chip--active' : ''}`}
+        onClick={() => update({ schedule: s.id })}disabled={!config.enabled}
+        >
+        {s.label}
+        </button>
+    ))}
+    </div>
 </div>
 
 <div className="art-config-row">
@@ -178,15 +176,14 @@ title={s.desc}
 <span className="art-config-desc">Only recover tokens worth at least this much</span>
 </div>
 <div className="art-chip-group">
-{MIN_DUST_OPTIONS.map(val => (
-<button
-key={val}
-className={`art-chip ${config.minDustUsd === val ? 'art-chip--active' : ''}`}
-onClick={() => update({ minDustUsd: val })}
-disabled={!config.enabled}
->
-${val.toFixed(2)}
-</button>
+    {MIN_DUST_OPTIONS.map(val => (
+    <button
+    key={val}
+    className={`art-chip ${config.minDustUsd === val ? 'art-chip--active' : ''}`}
+    onClick={() => update({ minDustUsd: val })}disabled={!config.enabled}
+    >
+    ${val.toFixed(2)}
+    </button>
 ))}
 </div>
 </div>
