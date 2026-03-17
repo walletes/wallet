@@ -83,7 +83,7 @@ const [autoCompound, setAutoCompound] = useState<boolean>(DEFAULT_CONFIG.autoCom
 
 const [expanded, setExpanded] = useState(false)
 
-const toggleEnabled = () => Date({ enabled: !enabled })
+const toggleEnabled = () => setEnabled(prev => !prev)
 
 return (
 <div className={`art-wrapper ${enabled ? 'art--on' : 'art--off'}`}>
@@ -213,7 +213,7 @@ aria-expanded={expanded}
 </div>
 <button
 className={`toggle-track ${autoCompound ? 'on' : ''}`}
-onClick={() => update({ autoCompound: !autoCompound })}
+onClick={() => setAutoCompound(prev => !prev)}
 disabled={!enabled}
 style={{ border: 'none', cursor: enabled ? 'pointer' : 'not-allowed', opacity: enabled ? 1 : 0.4 }}
 >
