@@ -81,6 +81,18 @@ const [minDustUsd, setMinDustUsd] = useState<number>(DEFAULT_CONFIG.minDustUsd)
 const [targetToken, setTargetToken] = useState<string>(DEFAULT_CONFIG.targetToken)
 const [autoCompound, setAutoCompound] = useState<boolean>(DEFAULT_CONFIG.autoCompound)
 
+const handleChange = (partial: Partial<AutoRecoveryConfig> = {}) => { 
+   onChange?.({
+   enabled,
+   schedule,
+   minDustUsd,
+   targetToken,
+   autoCompound,
+   ...partial
+             })
+   }
+
+
 const [expanded, setExpanded] = useState(false)
 
 const toggleEnabled = () => setEnabled(prev => !prev)
@@ -102,7 +114,7 @@ return (
 </div>
 <button
 className={`toggle-track ${enabled ? 'on' : ''}`}
-onClick={toggleEnabled}
+onClick={() => { setEnabled(prev => !prev); handleChange() }}
 aria-label={enabled ? 'Disable auto recovery' : 'Enable auto recovery'}
 style={{ border: 'none', cursor: 'pointer', flexShrink: 0 }}
 >
@@ -159,8 +171,10 @@ aria-expanded={expanded}
     <button
     key={s.id}
     className={`art-chip ${schedule === s.id ? 'art-chip--active' : ''}`}
-    onClick={() => setSchedule(s.id)}
-    disabled={!enabled}
+    onClick={() => { setSchedule(s.id)
+              handleChange({ schedule: s.id })
+                  }}
+                      disabled={!enabled}
     >
     {s.label}
     </button>
@@ -178,8 +192,11 @@ aria-expanded={expanded}
     <button
     key={val}
     className={`art-chip ${minDustUsd === val ? 'art-chip--active' : ''}`}
-    onClick={() => setMinDustUsd(val)}
-    disabled={!enabled}
+    onClick={() => {
+       setMinDustUsd(val)
+       handleChange({ minDustUsd: val }) 
+                        }}
+      disabled={!enabled}
     >
     ${val.toFixed(2)}
     </button>
@@ -197,8 +214,11 @@ aria-expanded={expanded}
     <button
     key={tok}
     className={`art-chip art-chip--mono ${targetToken === tok ? 'art-chip--active' : ''}`}
-    onClick={() => setTargetToken(tok)}
-    disabled={!enabled}
+    onClick={() => {
+   setTargetToken(tok)
+   handleChange({ targetToken: tok }) 
+                  }}
+   disabled={!enabled}
     >
     {tok}
     </button>
@@ -213,7 +233,9 @@ aria-expanded={expanded}
 </div>
 <button
 className={`toggle-track ${autoCompound ? 'on' : ''}`}
-onClick={() => setAutoCompound(prev => !prev)}
+onClick={() => {
+        setAutoCompound(prev => !prev)
+            handleChange({ autoCompound: !autoCompound }) }}
 disabled={!enabled}
 style={{ border: 'none', cursor: enabled ? 'pointer' : 'not-allowed', opacity: enabled ? 1 : 0.4 }}
 >

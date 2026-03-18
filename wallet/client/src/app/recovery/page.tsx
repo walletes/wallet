@@ -115,18 +115,18 @@ export default function RecoveryPage({ walletAddress, nftHolder = false }: Recov
   };
 
   return ( 
-    <div className="recovery-page">
-  <div>Recovery Page Loaded. Tokens: {tokens.length}</div>;
+  <div className="recovery-page">
+
       {/* ── HEADER CARDS ───── */}
-      <div className="recovery-header grid grid-cols-1 md:grid-cols-2 gap-4">
+  <div className="recovery-header">
     <WalletHealthCard tokens={tokens} /> 
        <DustSummary/>
       </div> 
-      */
+  
 
       {/* NFT Auto-Swap Toggle */}
       {nftHolder && (
-        <div className="auto-swap-toggle my-4">
+     <div className="auto-swap-toggle">
           <button
             className={`btn-auto-swap ${autoSwapEnabled ? 'on' : 'off'}`}
             onClick={() => setAutoSwapEnabled(prev => !prev)}
@@ -141,7 +141,7 @@ export default function RecoveryPage({ walletAddress, nftHolder = false }: Recov
 
       {/* Manual Swap */}
       {dustTokens.length > 0 && (
-        <div className="manual-swap my-2">
+     <div className="manual-swap">
           <button
             className="btn-manual-swap"
             onClick={handleManualSwap}
@@ -153,7 +153,7 @@ export default function RecoveryPage({ walletAddress, nftHolder = false }: Recov
       )}
 
       {/* ── TOKEN LIST ────── */}
-      <div className="recovery-tokenlist my-6">
+    <div className="recovery-tokenlist">
         <TokenList
           selectable
          selectedIds={Array.from(selected)}
@@ -163,7 +163,7 @@ export default function RecoveryPage({ walletAddress, nftHolder = false }: Recov
 
       {/* ── BATCH BURN ─────── */}
       {batchTokens.length > 0 && (
-        <div className="recovery-batchburn mt-4">
+      <div className="recovery-batchburn">
         <BatchBurnButton 
             tokens={batchTokens}
             onProgress={handleBatchProgress}
@@ -177,14 +177,14 @@ export default function RecoveryPage({ walletAddress, nftHolder = false }: Recov
 
       {/* ── LIVE BURN PROGRESS ───── */}
       {burningToken && (
-        <div className="burn-progress my-2 p-2 bg-yellow-50 rounded border border-yellow-200 text-yellow-800">
+       <div className="burn-progress p-3 rounded">
           Burning <strong>{burningToken}</strong>…
         </div>
       )}
 
       {/* ── BATCH LOG ─────── */}
       {burnLog.length > 0 && (
-        <div className="burn-log mt-4 p-2 bg-gray-50 rounded border border-gray-200 text-gray-700 max-h-48 overflow-y-auto font-mono text-sm">
+      <div className="burn-log p-3">
           {burnLog.map((line, idx) => <div key={idx}>{line}</div>)}
         </div>
       )}

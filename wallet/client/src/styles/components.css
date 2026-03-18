@@ -1,3 +1,87 @@
-/* placeholder styles for components */
-.btn { cursor: pointer; }
-.card { border-radius: var(--radius-md); }
+.recovery-page {
+    width: 100%;
+    max-width: 1400px;
+
+    margin-left: auto;
+    margin-right: auto;
+
+    padding-left: 24px;
+    padding-right: 24px;
+    padding-top: 48px;
+    padding-bottom: 32px;
+
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    }
+
+    .recovery-header > * {
+    background: var(--bg-card);
+    padding: 20px;
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    }
+
+    .recovery-tokenlist {
+    background: var(--bg-card);
+    padding: 16px;
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    }
+
+    .auto-swap-toggle,
+    .manual-swap,
+    .recovery-batchburn {
+    display: flex;
+    gap: 12px;
+    }
+
+    .burn-progress {
+    background: rgba(255, 200, 0, 0.1);
+    }
+
+    .burn-log {
+    background: var(--bg-card);
+    border-radius: var(--radius-card);
+    max-height: 200px;
+    overflow-y: auto;
+    font-family: monospace;
+    font-size: 13px;
+    }
+.recovery-header {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+          }
+
+ @media (min-width: 768px) {
+  .recovery-header {
+   grid-template-columns: 1fr 1fr;
+                  }
+                  }
+.recovery-header > *,
+.recovery-tokenlist,
+.recovery-batchburn,
+.auto-swap-toggle,
+.manual-swap,
+.burn-progress,
+.burn-log {
+  width: 100%;
+  }
+
+.recovery-header > *,
+.recovery-tokenlist {
+  background: var(--bg-card);
+    padding: 20px;
+      border-radius: 16px;
+        box-shadow: var(--shadow-card);
+        }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  }
+
+  .recovery-page {
+    outline: 2px solid red;
+    }
