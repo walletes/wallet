@@ -81,17 +81,18 @@ const [minDustUsd, setMinDustUsd] = useState<number>(DEFAULT_CONFIG.minDustUsd)
 const [targetToken, setTargetToken] = useState<string>(DEFAULT_CONFIG.targetToken)
 const [autoCompound, setAutoCompound] = useState<boolean>(DEFAULT_CONFIG.autoCompound)
 
-const handleChange = (partial: Partial<AutoRecoveryConfig> = {}) => { 
-   onChange?.({
-   enabled,
-   schedule,
-   minDustUsd,
-   targetToken,
-   autoCompound,
-   ...partial
-             })
-   }
-
+const handleChange = (updates: Partial<AutoRecoveryConfig> = {}) => {
+    onChange?.({
+     // start with current state
+     enabled,
+     schedule,
+     minDustUsd,
+     targetToken,
+     autoCompound,
+   // Overwrite with the NEW values being clicked
+     ...updates 
+       });
+       };
 
 const [expanded, setExpanded] = useState(false)
 
@@ -171,10 +172,11 @@ aria-expanded={expanded}
     <button
     key={s.id}
     className={`art-chip ${schedule === s.id ? 'art-chip--active' : ''}`}
-    onClick={() => { setSchedule(s.id)
-              handleChange({ schedule: s.id })
-                  }}
-                      disabled={!enabled}
+    onClick={() => { 
+        setSchedule(s.id); 
+        handleChange({ schedule: s.id });
+        }}
+   disabled={!enabled}
     >
     {s.label}
     </button>
@@ -193,9 +195,10 @@ aria-expanded={expanded}
     key={val}
     className={`art-chip ${minDustUsd === val ? 'art-chip--active' : ''}`}
     onClick={() => {
-       setMinDustUsd(val)
-       handleChange({ minDustUsd: val }) 
-                        }}
+        setMinDustUsd(val);
+        handleChange({ minDustUsd: val });
+        }}
+
       disabled={!enabled}
     >
     ${val.toFixed(2)}

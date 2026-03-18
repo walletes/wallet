@@ -1,90 +1,157 @@
+/* ────────── RECOVERY PAGE WRAPPER ────────── */
 .recovery-page {
-    width: 100%;
-    max-width: 1400px;
-
-    margin-left: auto;
-    margin-right: auto;
-
-    padding-left: 24px;
-    padding-right: 24px;
-    padding-top: 68px;
-    padding-bottom: 32px;
-
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-    }
-
-    .recovery-header > * {
-    background: var(--bg-card);
-    padding: 20px;
-    border-radius: var(--radius-card);
-    box-shadow: var(--shadow-card);
-    }
-
-    .recovery-tokenlist {
-    background: var(--bg-card);
-    padding: 16px;
-    border-radius: var(--radius-card);
-    box-shadow: var(--shadow-card);
-    }
-
-    .auto-swap-toggle,
-    .manual-swap,
-    .recovery-batchburn {
-    display: flex;
-    gap: 12px;
-    }
-
-    .burn-progress {
-    background: rgba(255, 200, 0, 0.1);
-    }
-
-    .burn-log {
-    background: var(--bg-card);
-    border-radius: var(--radius-card);
-    max-height: 200px;
-    overflow-y: auto;
-    font-family: monospace;
-    font-size: 13px;
-    }
-.recovery-header {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 18px;
-
-    padding-left: 3px;
-    padding-right: 3px;
-    }
-
- @media (min-width: 768px) {
-  .recovery-header {
-   grid-template-columns: 1fr;
-                  }
-                  }
-.recovery-header > *,
-.recovery-tokenlist,
-.recovery-batchburn,
-.auto-swap-toggle,
-.manual-swap,
-.burn-progress,
-.burn-log {
   width: 100%;
-  }
-
-.recovery-header > *,
-.recovery-tokenlist {
-  background: var(--bg-card);
-    padding: 20px;
-      border-radius: 16px;
-        box-shadow: var(--shadow-card);
-        }
-*,
-*::before,
-*::after {
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 2.5rem 1.5rem 2rem; /* top 64px, sides 24px, bottom 32px */
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem; /* 24px */
   box-sizing: border-box;
-  }
+}
+
+/* ────────── HEADER CARDS ────────── */
+.recovery-header {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem; /* 16px */
+}
 
 .recovery-header > * {
-      min-width: 0;
-      }
+  background: var(--bg-card);
+  padding: 1.25rem; /* 20px */
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  min-width: 0; /* allow shrinking on mobile */
+  width: 100%;
+  word-break: break-word; /* prevent overflow */
+  overflow-wrap: anywhere;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem; /* 12px internal spacing */
+}
+
+/* ────────── TOKEN LIST & BATCH BURN ────────── */
+.recovery-tokenlist,
+.recovery-batchburn {
+  background: var(--bg-card);
+  padding: 1rem; /* 16px */
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  width: 100%;
+  min-width: 0;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* ────────── NFT / MANUAL SWAP CONTROLS ────────── */
+.auto-swap-toggle,
+.manual-swap {
+  display: flex;
+  gap: 0.75rem; /* 12px */
+  flex-wrap: wrap;
+}
+
+.auto-swap-toggle button,
+.manual-swap button {
+  flex: 1 1 auto;
+  min-width: 120px; /* don't shrink too small */
+  text-align: center;
+}
+
+/* ────────── BURN PROGRESS & LOG ────────── */
+.burn-progress {
+  background: rgba(255, 200, 0, 0.1);
+  padding: 0.75rem; /* 12px */
+  border-radius: var(--radius-card);
+  width: 100%;
+  box-sizing: border-box;
+  animation: pulse 1s infinite alternate;
+  word-break: break-word;
+}
+
+.burn-log {
+  background: var(--bg-card);
+  border-radius: var(--radius-card);
+  max-height: 12rem; /* 200px */
+  overflow-y: auto;
+  font-family: monospace;
+  font-size: 0.8125rem; /* 13px */
+  padding: 0.75rem; /* 12px */
+  width: 100%;
+  box-sizing: border-box;
+  word-break: break-word;
+}
+
+/* ────────── BUTTONS ────────── */
+.btn-auto-swap,
+.btn-manual-swap {
+  padding: 0.625rem 1rem; /* 10px 16px */
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  flex-grow: 1;
+}
+
+.btn-auto-swap {
+  background: var(--blue-dim);
+  color: var(--blue);
+}
+
+.btn-auto-swap.off {
+  background: #eee;
+  color: #666;
+}
+
+.btn-manual-swap {
+  background: var(--purple-dim);
+  color: var(--purple);
+}
+
+.btn-manual-swap:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ────────── ANIMATIONS ────────── */
+@keyframes pulse {
+  0% { opacity: 0.8; }
+  100% { opacity: 1; }
+}
+
+/* ────────── RESPONSIVE MOBILE FIXES ────────── */
+@media (max-width: 768px) {
+  .recovery-page {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .recovery-header {
+    grid-template-columns: 1fr;
+  }
+
+  .recovery-header > *,
+  .recovery-tokenlist,
+  .recovery-batchburn,
+  .auto-swap-toggle,
+  .manual-swap,
+  .burn-progress,
+  .burn-log {
+    width: 100%;
+  }
+
+  .auto-swap-toggle,
+  .manual-swap {
+    flex-direction: column;
+  }
+}
+
+/* ────────── DESKTOP ULTRA-WIDE ----------- */
+@media (min-width: 1600px) {
+  .recovery-page {
+    padding-left: 3rem;
+    padding-right: 3rem;
+  }
+}

@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import AutoRecoveryToggle from '../../components/automation/AutoRecoveryToggle';
 import AutoBurnToggle from '../../components/automation/AutoBurnToggle';
 import AutomationLogs from '../../components/automation/AutomationLogs';
