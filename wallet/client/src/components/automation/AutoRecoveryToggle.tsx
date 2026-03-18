@@ -241,8 +241,10 @@ aria-expanded={expanded}
 <button
 className={`toggle-track ${autoCompound ? 'on' : ''}`}
 onClick={() => {
-        setAutoCompound(prev => !prev)
-            handleChange({ autoCompound: !autoCompound }) }}
+    const nextCompound = !autoCompound;
+    setAutoCompound(nextCompound);
+    handleChange({ autoCompound: nextCompound });
+    }}
 disabled={!enabled}
 style={{ border: 'none', cursor: enabled ? 'pointer' : 'not-allowed', opacity: enabled ? 1 : 0.4 }}
 >
