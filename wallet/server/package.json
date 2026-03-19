@@ -4,7 +4,7 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
-     "dev": "ts-node-dev --respawn --transpile-only --esm src/index.ts",
+    "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js"
   },
@@ -16,12 +16,13 @@
     "morgan": "*"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.19",
+    "@types/cors": "*",
     "@types/express": "*",
-    "@types/helmet": "^0.0.48",
-    "@types/morgan": "^1.9.10",
+    "@types/helmet": "*",
+    "@types/morgan": "*",
     "@types/node": "*",
     "ts-node-dev": "*",
+    "tsx": "^4.21.0",
     "typescript": "*"
   }
 }
