@@ -1,5 +1,5 @@
 import express from 'express';
-import { recoverDust } from './recovery.controller';
+import { recoverDust } from './recovery.controller.js';
 
 const recoveryRouter = express.Router();
 

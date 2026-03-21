@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { Express } from 'express';
-import { logger } from '../utils/logger';
+import { logger } from '../utils/logger.js';
 
 export function loadRoutes(app: Express) {
   const modulesPath = path.join(__dirname, '../modules');

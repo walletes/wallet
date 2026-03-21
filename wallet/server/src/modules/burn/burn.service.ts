@@ -1,4 +1,4 @@
-import { batchBurnTokens } from './batchBurnEngine'
+import { batchBurnTokens } from './batchBurnEngine.js'
 
 export async function executeSpamBurn(walletAddress: string) {
   const tokensToBurn = ['SPAM1', 'SPAM2'] // stub: replace with token scanner

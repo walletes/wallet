@@ -1,5 +1,5 @@
 import express from 'express';
-import { getRules, updateRule } from './automation.controller';
+import { getRules, updateRule } from './automation.controller.js';
 
 const automationRouter = express.Router();
 

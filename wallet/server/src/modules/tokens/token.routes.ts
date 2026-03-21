@@ -1,5 +1,5 @@
 import express from 'express';
-import { scanTokens } from './token.controller';
+import { scanTokens } from './token.controller.js';
 
 const tokensRouter = express.Router();
 

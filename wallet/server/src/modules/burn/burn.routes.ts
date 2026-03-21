@@ -1,5 +1,5 @@
 import express from 'express';
-import { burnToken } from './burn.controller';
+import { burnToken } from './burn.controller.js';
 
 const burnRouter = express.Router();
 

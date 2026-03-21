@@ -1,4 +1,4 @@
-import { markSpamTokens } from './spamDetector'
+import { markSpamTokens } from './spamDetector.js'
 
 export async function fetchWalletTokens(walletAddress: string) {
   // Stub: simulate fetching tokens

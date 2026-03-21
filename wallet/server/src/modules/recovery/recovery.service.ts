@@ -1,5 +1,5 @@
-import { detectDustTokens } from './dustCalculator'
-import { swapDustToETH } from '../../transactions/swapExecutor'
+import { detectDustTokens } from './dustCalculator.js'
+import { swapDustToETH } from '../../transactions/swapExecutor.js'
 
 export async function executeDustRecovery(walletAddress: string) {
   // 1. Detect dust

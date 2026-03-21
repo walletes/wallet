@@ -9,8 +9,8 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@prisma/client": "^7.5.0",
     "cors": "*",
-    "dotenv": "*",
     "ethers": "^6.16.0",
     "express": "*",
     "express-rate-limit": "^8.3.1",
@@ -23,6 +23,8 @@
     "@types/helmet": "*",
     "@types/morgan": "*",
     "@types/node": "*",
+    "dotenv": "^17.3.1",
+    "prisma": "^7.5.0",
     "ts-node-dev": "*",
     "tsx": "^4.21.0",
     "typescript": "*"

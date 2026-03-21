@@ -31,7 +31,6 @@ export async function scanGlobalWallet(address: string): Promise<FinalAsset[]> {
       const provider = getProvider(chain.rpc);
       let assets: FinalAsset[] = [];
 
-      // 1. Native balance check
       const native = await Promise.race([
         provider.getBalance(address),
         new Promise<bigint>((_, r) => setTimeout(() => r(0n), 3500))
@@ -41,9 +40,9 @@ export async function scanGlobalWallet(address: string): Promise<FinalAsset[]> {
         assets.push({ chain: chain.name, type: 'native', symbol: chain.symbol, balance: formatEther(native) });
       }
 
-      // 2. Alchemy Deep Scan (Automatic Token Discovery)
-      if (chain.alchemy && process.env.ALCHEMY_API_KEY) {
-        const url = getAlchemyUrl(chain.alchemy);
+      const url = chain.alchemy ? getAlchemyUrl(chain.alchemy) : null;
+      
+      if (url && process.env.ALCHEMY_API_KEY) {
         const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -66,12 +65,10 @@ export async function scanGlobalWallet(address: string): Promise<FinalAsset[]> {
             } : null;
           }));
           assets.push(...(alchemyTokens.filter(Boolean) as FinalAsset[]));
-          // If Alchemy found tokens, we consider this chain "covered" and skip fallbacks
           if (assets.length > 1) return assets; 
         }
       }
 
-      // 3. Fallback logic: Covalent then Moralis
       const covalentRes: AggregatedToken[] = await fetchFromCovalent(chain.id, address);
       if (covalentRes.length > 0) {
         assets.push(...covalentRes.map(t => ({
@@ -104,5 +101,4 @@ export async function scanGlobalWallet(address: string): Promise<FinalAsset[]> {
   return results.flat();
 }
 
-// Fixed signature
 export async function scanWallet(_address?: string) { return []; }
