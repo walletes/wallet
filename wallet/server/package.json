@@ -9,6 +9,7 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.5.0",
     "@prisma/client": "^7.5.0",
     "@prisma/config": "^7.5.0",
     "cors": "*",
@@ -16,7 +17,8 @@
     "express": "*",
     "express-rate-limit": "^8.3.1",
     "helmet": "*",
-    "morgan": "*"
+    "morgan": "*",
+    "pg": "^8.20.0"
   },
   "devDependencies": {
     "@types/cors": "*",
@@ -24,6 +26,7 @@
     "@types/helmet": "*",
     "@types/morgan": "*",
     "@types/node": "*",
+    "@types/pg": "^8.20.0",
     "dotenv": "^17.3.1",
     "prisma": "^7.5.0",
     "ts-node-dev": "*",
