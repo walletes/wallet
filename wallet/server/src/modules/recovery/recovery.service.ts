@@ -1,5 +1,5 @@
 import { detectDustTokens, DustReport } from './dustCalculator.js';
-import { getSmartRescueQuote } from './swapExecutor.js';
+import { swapExecutor } from './swapExecutor.js';
 import { rulesEngine } from '../automation/rulesEngine.js';
 import { feeCalculator } from '../../pricing/feeCalculator.js';
 import { logger } from '../../utils/logger.js';
@@ -62,7 +62,7 @@ export const recoveryService = {
       }
 
       // 4. STRATEGY ORCHESTRATION: Call SwapExecutor with Intelligence Metadata
-      const rescuePlans = await getSmartRescueQuote(safeAddr, profitableTokens);
+      const rescuePlans = await swapExecutor.getSmartRescueQuote(safeAddr, profitableTokens);
 
       // 5. ANALYTICS & DB LOGGING
       prisma.recoveryAttempt.create({
