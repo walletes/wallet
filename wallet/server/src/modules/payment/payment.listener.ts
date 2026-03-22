@@ -1,4 +1,4 @@
-import prisma from '../../config/database.js';
+import {prisma} from '../../config/database.js';
 import { paymentService } from './payment.service.js';
 
 export async function startPaymentListener() {
@@ -15,7 +15,7 @@ export async function startPaymentListener() {
         try {
           if (p.txHash) {
             await paymentService.verifyTransaction(p.id, p.txHash);
-            console.log(`✅ Auto-Confirmed Payment: ${p.id}`);
+            console.log(`Confirmed Payment: ${p.id}`);
           }
         } catch {
           // If still pending or failed, we skip and try next interval

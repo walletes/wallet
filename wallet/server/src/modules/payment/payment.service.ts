@@ -1,4 +1,4 @@
-import prisma from '../../config/database.js';
+import {prisma} from '../../config/database.js';
 import { getProvider } from '../../blockchain/provider.js';
 import { EVM_CHAINS } from '../../blockchain/chains.js';
 import { ethers } from 'ethers';
@@ -19,7 +19,7 @@ export const paymentService = {
   },
 
   // match the controller call
-  async verifyOnChain(paymentId: string, txHash: string) {
+  async verifyTransaction(paymentId: string, txHash: string) {
     const payment = await prisma.payment.findUnique({ where: { id: paymentId } });
     if (!payment) throw new Error("WIP_ID not found");
 

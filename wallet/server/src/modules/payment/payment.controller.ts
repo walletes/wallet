@@ -16,7 +16,7 @@ export async function confirmPayment(req: Request, res: Response) {
   try {
     const { wip_id, txHash } = req.body;
    
-    const confirmed = await paymentService.verifyOnChain(wip_id, txHash);
+    const confirmed = await paymentService.verifyTransaction(wip_id, txHash);
     
     // Auto-generate API key for the wallet
     await apiService.generateKey(confirmed.wallet, "PRO_PLAN");

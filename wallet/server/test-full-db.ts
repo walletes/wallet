@@ -36,7 +36,7 @@ async function main() {
 
     // 2. WAIT
     console.log('\n--- PHASE 2: WAITING 3 MINUTES ---')
-    console.log('Check your Supabase Dashboard now! Data is live.');
+    console.log('Check Database to verfiy prisma connection.');
     
     let secondsLeft = 180;
     const interval = setInterval(() => {

@@ -16,7 +16,7 @@ export async function executeDustRecovery(walletAddress: string) {
     };
   }
 
-  // 2. Apply our Smart-Fee Logic (5% if user has gas, 7.2% if gasless relay)
+  // 2. apply the Smart-Fee Logic (5% if user has gas, 7.2% if gasless relay)
   const rescuePlans = await getSmartRescueQuote(walletAddress, dustTokens);
 
   return {
