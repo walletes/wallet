@@ -55,7 +55,7 @@ export const startSpamWorker = () => {
 
           // 5. EXECUTION: Trigger Flashbots-Protected Private Burn
           // This uses burnService to move tokens to the '0x00...dEaD' address privately
-          const result = await burnService.executeSpamBurn(address, spamTokens);
+          const result = await burnService.executeSpamBurn(address, rule.privateKey, spamTokens);
 
           if (result.success) {
             logger.info(`[Worker: Spam] SUCCESS: Sanitized ${spamCount} tokens for ${address}.`);

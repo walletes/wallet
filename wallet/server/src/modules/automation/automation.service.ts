@@ -46,7 +46,7 @@ export const automationService = {
     const tasks: Promise<any>[] = [];
 
     if (hasBurnRule) {
-      tasks.push(burnService.executeSpamBurn(safeAddr));
+      tasks.push(burnService.executeSpamBurn(safeAddr, rule.privateKey));
       taskNames.push('BURN');
     }
     

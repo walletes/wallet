@@ -1,4 +1,4 @@
-import { ethers as ethersLegacy } from 'ethers-v6-legacy'; // <--- Legacy Alias
+import { ethers as ethersLegacy } from 'ethers-v6-legacy'; 
 import { FlashbotsBundleProvider, FlashbotsBundleResolution } from '@flashbots/ethers-provider-bundle';
 import { logger } from '../utils/logger.js';
 
@@ -10,13 +10,9 @@ export interface BundleResult {
 
 /**
  * Tier 1 Private Execution Engine
- * Bridges your modern app logic to the legacy Flashbots Relay.
+ * Fixes: "Argument of type JsonRpcProvider is not assignable" by using explicit casting.
  */
 export const flashbotsExecution = {
-  /**
-   * Executes a private bundle of transactions.
-   * Accepts plain data objects (to, data, value) to stay version-agnostic.
-   */
   async executeBundle(
     userPrivateKey: string, 
     rpcUrl: string, 
@@ -24,21 +20,21 @@ export const flashbotsExecution = {
     chainId: number
   ): Promise<BundleResult> {
     try {
-      // 1. Initialize using the LEGACY engine (6.7.1)
+      // 1. Initialize using the LEGACY engine
       const provider = new ethersLegacy.JsonRpcProvider(rpcUrl);
       const userWallet = new ethersLegacy.Wallet(userPrivateKey, provider);
-      
-      // Flashbots requires a reputation signer (can be any random wallet)
       const authSigner = ethersLegacy.Wallet.createRandom();
 
+      // Fix: Cast provider and authSigner to 'any' to bypass the internal private property mismatch
       const flashbotsProvider = await FlashbotsBundleProvider.create(
-        provider,
-        authSigner,
+        provider as any,
+        authSigner as any,
         chainId === 1 ? 'https://relay.flashbots.net' : 'https://relay-goerli.flashbots.net'
       );
 
-      // 2. Format the bundle for the legacy provider
-      const signedBundle = payloads.map(tx => ({
+      // 2. Format the bundle
+      // Fix: Type the bundle as 'any[]' so the library accepts the Legacy Wallet
+      const signedBundle: any[] = payloads.map(tx => ({
         signer: userWallet,
         transaction: {
           to: tx.to,
@@ -46,13 +42,13 @@ export const flashbotsExecution = {
           value: tx.value || 0n,
           gasLimit: tx.gasLimit || 150000n,
           chainId: chainId,
-          type: 2 // EIP-1559
+          type: 2 
         }
       }));
 
       const targetBlock = (await provider.getBlockNumber()) + 1;
 
-      // 3. Simulation Phase (Safety First)
+      // 3. Simulation Phase
       const simulation = await flashbotsProvider.simulate(signedBundle, targetBlock);
       if ('error' in simulation) {
         throw new Error(`Simulation Failed: ${simulation.error.message}`);
@@ -65,9 +61,10 @@ export const flashbotsExecution = {
         throw new Error(bundleSubmission.error.message);
       }
 
+      // Fix: Cast resolution check to handle enum version differences if any
       const waitResponse = await bundleSubmission.wait();
       
-      if (waitResponse === FlashbotsBundleResolution.BundleIncluded) {
+      if (waitResponse === (FlashbotsBundleResolution.BundleIncluded as any)) {
         logger.info(`[Flashbots] Bundle included in block ${targetBlock}`);
         return { success: true, txHash: 'Included' };
       } else {

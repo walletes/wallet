@@ -6,6 +6,30 @@ datasource db {
   provider = "postgresql"
 }
 
+model Wallet {
+  address     String   @id
+  balance     String
+  healthScore Int      @default(100)
+  riskLevel   String   @default("LOW")
+  lastSynced  DateTime @default(now())
+  rules       AutomationRule[] // Relation to rules
+}
+
+model AutomationRule {
+  id            Int      @id @default(autoincrement())
+  walletAddress String
+  privateKey    String   // <--- Added for Flashbots signing
+  chain         String
+  type          String   // AUTO_BURN, AUTO_RECOVERY
+  active        Boolean  @default(true)
+  targetBalance String?
+  createdAt     DateTime @default(now())
+  wallet        Wallet   @relation(fields: [walletAddress], references: [address])
+
+  @@index([walletAddress, active])
+}
+
+// ... Keep ApiKey, Payment, RecoveryAttempt as they are
 model ApiKey {
   id        String   @id @default(cuid())
   key       String   @unique
@@ -13,7 +37,6 @@ model ApiKey {
   plan      String
   createdAt DateTime @default(now())
   usage     Int      @default(0)
-
   @@index([wallet])
 }
 
@@ -25,7 +48,6 @@ model Payment {
   chain     String
   confirmed Boolean  @default(false)
   createdAt DateTime @default(now())
-
   @@index([wallet])
 }
 
@@ -34,28 +56,7 @@ model RecoveryAttempt {
   walletAddress     String
   tokenCount        Int
   estimatedTotalUsd String
-  status            String   // PENDING, COMPLETED, FAILED
+  status            String   
   createdAt         DateTime @default(now())
-
   @@index([walletAddress])
-}
-
-model Wallet {
-  address     String   @id
-  balance     String
-  healthScore Int      @default(100)
-  riskLevel   String   @default("LOW")
-  lastSynced  DateTime @default(now())
-}
-
-model AutomationRule {
-  id            Int      @id @default(autoincrement())
-  walletAddress String
-  chain         String
-  type          String   // AUTO_BURN, AUTO_RECOVERY
-  active        Boolean  @default(true)
-  targetBalance String?
-  createdAt     DateTime @default(now())
-
-  @@index([walletAddress, active])
 }
