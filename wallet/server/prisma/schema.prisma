@@ -1,11 +1,9 @@
 generator client {
   provider = "prisma-client-js"
-
 }
 
 datasource db {
   provider = "postgresql"
- 
 }
 
 model ApiKey {
@@ -25,4 +23,19 @@ model Payment {
   chain     String
   confirmed Boolean  @default(false)
   createdAt DateTime @default(now())
+}
+
+model RecoveryAttempt {
+  id                String   @id @default(cuid())
+  walletAddress     String
+  tokenCount        Int
+  estimatedTotalUsd String
+  status            String   // PENDING, COMPLETED, FAILED
+  createdAt         DateTime @default(now())
+}
+
+model Wallet {
+  address    String   @id
+  balance    String
+  lastSynced DateTime @default(now())
 }

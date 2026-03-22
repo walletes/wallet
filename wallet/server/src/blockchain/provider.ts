@@ -45,11 +45,11 @@ export function getProvider(rpcOrNetwork: string): JsonRpcProvider {
     throw new Error(`Invalid RPC or Network: ${rpcOrNetwork}`);
   }
 
-  // ✅ 1. Use FetchRequest for Network-Level Timeouts (Stops scanner hanging)
+  // Use FetchRequest for Network-Level Timeouts (Stops scanner hanging)
   const request = new FetchRequest(url);
   request.timeout = 5000; 
 
-  // ✅ 2. Use staticNetwork: true (Stops 'eth_chainId' spam, makes scan 2x faster)
+  // Use staticNetwork: true (Stops 'eth_chainId' spam, makes scan 2x faster)
   const provider = new JsonRpcProvider(request, undefined, {
     staticNetwork: true,
   });

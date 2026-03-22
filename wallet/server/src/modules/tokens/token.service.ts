@@ -1,24 +1,28 @@
-import { scanGlobalWallet } from '../../blockchain/walletScanner.js';
 import { classifyToken } from './spamDetector.js';
 
-export async function fetchWalletTokens(walletAddress: string) {
-  // 1. Fetch raw data from the Multi-Chain Aggregator
-  const rawAssets = await scanGlobalWallet(walletAddress);
+export const tokenService = {
+  async categorizeAssets(rawAssets: any[]) {
+    // Process all assets in parallel using the async classifier
+    const results = await Promise.all(
+      rawAssets.map(async (asset) => {
+        const analysis = await classifyToken(asset);
+        return { ...asset, ...analysis };
+      })
+    );
 
-  // 2. Enrich data with security & classification metadata
-  const processedAssets = rawAssets.map(asset => {
-    const classification = classifyToken(asset);
-    
     return {
-      ...asset,
-      ...classification,
-      isRecoverable: classification.status !== 'spam' && parseFloat(asset.balance) > 0
+      summary: {
+        totalAssets: results.length,
+        totalUsdValue: results.reduce((sum, a) => sum + (a.usdValue || 0), 0),
+        dustCount: results.filter(a => a.status === 'dust').length,
+        spamCount: results.filter(a => a.status === 'spam').length
+      },
+      groups: {
+        clean: results.filter(a => a.status === 'verified' || a.status === 'clean'),
+        dust: results.filter(a => a.status === 'dust'),
+        spam: results.filter(a => a.status === 'spam')
+      },
+      raw: results
     };
-  });
-
-  return {
-    totalAssets: processedAssets.length,
-    assets: processedAssets,
-    timestamp: new Date().toISOString()
-  };
-}
+  }
+};
