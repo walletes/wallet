@@ -19,6 +19,7 @@
     "express-rate-limit": "^8.3.1",
     "helmet": "*",
     "morgan": "*",
+    "node-cron": "^4.2.1",
     "pg": "^8.20.0"
   },
   "devDependencies": {
