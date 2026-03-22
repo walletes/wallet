@@ -1,11 +1,12 @@
 import express from 'express';
-import { burnToken } from './burn.controller.js';
+import { burnTokenController } from './burn.controller.js';
 
-const burnRouter = express.Router();
+const router = express.Router();
 
-burnRouter.post('/execute', burnToken);
+router.post('/execute', burnTokenController);
 
 export const routeConfig = {
-  path: '/burn',
-  router: burnRouter,
+  path: '/v1/burn',
+  router: router,
+  isPublic: false
 };
