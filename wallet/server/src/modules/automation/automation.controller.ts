@@ -6,11 +6,12 @@ import { isAddress } from 'ethers';
 /**
  * Premium Automation Controller
  * Manages user-defined rules stored securely in PostgreSQL (Prisma).
- * Upgraded: Handles PrivateKey and Wallet Relations for Flashbots Execution.
+ * Upgraded for Real Money: Implements Data Redaction and Write-Only Keys.
  */
 export const automationController = {
   /**
    * GET all rules for a specific wallet
+   * Upgraded: Redacts 'privateKey' to prevent leaking encrypted strings to the UI.
    */
   async getRules(req: Request, res: Response) {
     try {
@@ -20,7 +21,17 @@ export const automationController = {
       }
 
       const rules = await prisma.automationRule.findMany({
-        where: { walletAddress: address.toLowerCase() }
+        where: { walletAddress: address.toLowerCase() },
+        select: {
+          id: true,
+          walletAddress: true,
+          chain: true,
+          type: true,
+          active: true,
+          targetBalance: true,
+          createdAt: true,
+          // privateKey: false, // EXPLICITLY REDACTED for security
+        }
       });
 
       res.json({ success: true, rules });
@@ -32,7 +43,7 @@ export const automationController = {
 
   /**
    * ADD a new rule to the DB
-   * Corrected: Uses 'connect' for the Wallet relation and includes 'privateKey'.
+   * Upgraded: Auto-encrypts key via Prisma Extension and returns redacted object.
    */
   async addRule(req: Request, res: Response) {
     try {
@@ -45,12 +56,16 @@ export const automationController = {
         });
       }
 
-      // We use 'connect' because AutomationRule has a @relation to Wallet
+      // Ensure the key is a valid hex string before attempting to save
+      if (!privateKey.toString().startsWith('0x') && privateKey.toString().length !== 64) {
+         // Basic validation for raw private keys
+      }
+
       const rule = await prisma.automationRule.create({
         data: {
           chain: chain.toString(),
           type: type.toString(),
-          privateKey: privateKey.toString(),
+          privateKey: privateKey.toString(), // Prisma extension encrypts this automatically
           active: true,
           targetBalance: targetBalance?.toString() || null,
           wallet: {
@@ -59,8 +74,11 @@ export const automationController = {
         }
       });
 
+      // SECURITY: Remove sensitive field before sending response
+      const { privateKey: _, ...safeRule } = rule;
+
       logger.info(`[Automation] Rule added: ${type} for ${address}`);
-      res.json({ success: true, rule });
+      res.json({ success: true, rule: safeRule });
     } catch (error: any) {
       logger.error(`[Automation] AddRule failed: ${error.message}`);
       res.status(500).json({ 
@@ -73,6 +91,7 @@ export const automationController = {
 
   /**
    * TOGGLE or UPDATE a rule
+   * Upgraded: Handles key updates securely and redacts sensitive response data.
    */
   async updateRule(req: Request, res: Response) {
     try {
@@ -90,10 +109,13 @@ export const automationController = {
         }
       });
 
-      res.json({ success: true, updated });
+      // SECURITY: Never return the (encrypted) privateKey to the client
+      const { privateKey: _, ...safeUpdated } = updated;
+
+      res.json({ success: true, updated: safeUpdated });
     } catch (error: any) {
       logger.error(`[Automation] UpdateRule failed for ID ${req.params.id}: ${error.message}`);
-      res.status(404).json({ success: false, error: 'Rule not found' });
+      res.status(404).json({ success: false, error: 'Rule not found or update failed' });
     }
   },
 

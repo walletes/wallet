@@ -10,15 +10,16 @@ import { prisma } from '../../config/database.js';
 /**
  * Tier 1 Recovery Intelligence Service
  * Orchestrates: Discovery -> Risk Profiling -> Fee Optimization -> Execution.
+ * Upgraded for Production: Secure Encrypted Key Handling and Multi-Chain MEV Protection.
  */
 export const recoveryService = {
   /**
    * Heavy-Duty Recovery Logic
    * Dynamically adjusts fees based on user tier and asset health.
    * @param walletAddress User's public address
-   * @param privateKey Required for automated execution (Optional for pure quoting)
+   * @param encryptedPrivateKey Encrypted key from DB (v1:iv:tag:cipher)
    */
-  async executeDustRecovery(walletAddress: string, privateKey?: string) {
+  async executeDustRecovery(walletAddress: string, encryptedPrivateKey?: string) {
     if (!walletAddress) throw new Error('Wallet address is required');
     
     const startTime = Date.now();
@@ -33,6 +34,7 @@ export const recoveryService = {
         rulesEngine.isEligibleForAutomation(safeAddr)
       ]);
 
+      // Only recover tokens that have been flagged as profitable by the calculator
       const profitableTokens = dustReports.filter(t => t.isProfitable);
 
       if (profitableTokens.length === 0) {
@@ -51,7 +53,7 @@ export const recoveryService = {
       // 3. DYNAMIC FEE CALCULATION
       const feeContext = {
         amountUsd: totalGrossUsd,
-        isGasless: true,
+        isGasless: true, // Flashbots bundles don't require public gas if structured correctly
         isNftHolder,
         riskScore: 100 - avgRiskScore 
       };
@@ -59,25 +61,28 @@ export const recoveryService = {
       const feeReport = feeCalculator.calculateRescueFee(feeContext);
 
       if (!feeReport.isProfitable) {
-        logger.warn(`[Recovery] Skipping low-value rescue for ${safeAddr}: $${totalGrossUsd} value.`);
+        logger.warn(`[Recovery] Skipping low-value rescue for ${safeAddr}: $${totalGrossUsd.toFixed(2)} value.`);
         return { success: false, error: 'Low Value', message: 'Dust value does not cover execution costs.' };
       }
 
-      // 4. STRATEGY ORCHESTRATION: Get Quote
+      // 4. STRATEGY ORCHESTRATION: Get Quote and build multi-hop swap payloads
       const rescuePlans = await swapExecutor.getSmartRescueQuote(safeAddr, profitableTokens);
       const executionResults = [];
 
-      // 5. DYNAMIC EXECUTION: If privateKey is provided, trigger the Flashbots Bridge
-      if (privateKey && rescuePlans.length > 0) {
-        logger.info(`[Recovery] Initiating Automated Execution for ${safeAddr}`);
+      // 5. DYNAMIC EXECUTION: If encryptedPrivateKey is provided, trigger the Flashbots Bridge
+      if (encryptedPrivateKey && rescuePlans.length > 0) {
+        logger.info(`[Recovery] Initiating Automated MEV-Shielded Execution for ${safeAddr}`);
         
         for (const plan of rescuePlans) {
           const chain = EVM_CHAINS.find(c => c.name === plan.chain);
           
-          // Only execute if strategy requires shielding or if it is a protected chain
+          // Flashbots-only execution for 'PROTECTED' or 'RELAYED' strategies
           if (chain && (plan.strategy === 'RELAYED' || plan.securityStatus === 'PROTECTED')) {
+             logger.info(`[Recovery] Sending ${plan.payloads.length} swap steps to ${plan.chain} via Flashbots...`);
+             
+             // Pass encrypted key - decryption happens safely inside flashbotsExecution
              const result = await flashbotsExecution.executeBundle(
-               privateKey,
+               encryptedPrivateKey,
                chain.rpc,
                plan.payloads || [],
                chain.id
@@ -89,12 +94,18 @@ export const recoveryService = {
                txHash: result.txHash,
                error: result.error
              });
+
+             if (result.success) {
+               logger.info(`[Recovery] Success on ${plan.chain}! Funds migrated to safe destination.`);
+             } else {
+               logger.error(`[Recovery] Bundle failed on ${plan.chain}: ${result.error}`);
+             }
           }
         }
       }
 
-      // 6. ANALYTICS & DB LOGGING
-      prisma.recoveryAttempt.create({
+      // 6. ANALYTICS & DB LOGGING (Persistent Tracking of Recoveries)
+      await prisma.recoveryAttempt.create({
         data: {
           walletAddress: safeAddr,
           tokenCount: profitableTokens.length,
@@ -120,7 +131,8 @@ export const recoveryService = {
         summary: {
           totalTokensFound: profitableTokens.length,
           activeChains: [...new Set(profitableTokens.map(t => t.asset.chain))],
-          executionsPerformed: executionResults.length
+          executionsPerformed: executionResults.length,
+          successfulExecutions: executionResults.filter(r => r.success).length
         },
         plans: rescuePlans,
         executionDetails: executionResults,

@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 import { logger } from '../utils/logger.js';
+import { encryptPrivateKey } from '../utils/crypto.js';
 
 const connectionString = process.env.DATABASE_URL;
 
@@ -19,7 +20,6 @@ pool.on('error', (err) => {
 
 /**
  * DATABASE INITIALIZER
- * Verifies the connection before the server starts.
  */
 export async function connectDB() {
   try {
@@ -32,9 +32,41 @@ export async function connectDB() {
   }
 }
 
-// 2. Initialize Prisma with the PG Adapter
-// Fix: 'as any' is required to bypass the @types/pg version mismatch
+// 2. Initialize Base Prisma with the PG Adapter
 const adapter = new PrismaPg(pool as any);
-export const prisma = new PrismaClient({ adapter });
+const basePrisma = new PrismaClient({ adapter });
 
-logger.info('[Database] Prisma Client with PG Adapter initialized.');
+/**
+ * 3. MAXIMUM SECURITY EXTENSION
+ * Automatically intercepts 'AutomationRule' writes to encrypt private keys.
+ * This prevents raw keys from ever hitting my database logs or storage.
+ */
+export const prisma = basePrisma.$extends({
+  query: {
+    automationRule: {
+      async create({ args, query }) {
+        if (args.data.privateKey) {
+          args.data.privateKey = encryptPrivateKey(args.data.privateKey);
+        }
+        return query(args);
+      },
+      async update({ args, query }) {
+        if (args.data.privateKey && typeof args.data.privateKey === 'string') {
+          args.data.privateKey = encryptPrivateKey(args.data.privateKey);
+        }
+        return query(args);
+      },
+      async upsert({ args, query }) {
+        if (args.create.privateKey) {
+          args.create.privateKey = encryptPrivateKey(args.create.privateKey);
+        }
+        if (args.update.privateKey && typeof args.update.privateKey === 'string') {
+          args.update.privateKey = encryptPrivateKey(args.update.privateKey);
+        }
+        return query(args);
+      }
+    },
+  },
+});
+
+logger.info('[Database] Secure Prisma Client with Auto-Encryption initialized.');

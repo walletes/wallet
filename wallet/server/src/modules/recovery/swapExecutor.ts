@@ -17,21 +17,17 @@ export interface RescueQuote {
   tokens: string[];
   securityStatus: 'SAFE' | 'RISKY' | 'PROTECTED';
   relayQuoteId?: string;
-  payloads: any[]; // Enabled for automated execution
+  payloads: any[];
 }
 
 /**
  * Tier 1 Smart Rescue Executor
- * Orchestrates Gasless Swaps, Private MEV Bundles, and Multi-Chain Failover.
+ * Upgraded for Real Money: Features MEV-Shielding, Slippage Protection, and JIT Payload Building.
  */
 export const swapExecutor = {
-  /**
-   * Generates a Production-Grade Rescue Quote with MEV-Shielding and Bridge Awareness.
-   */
   async getSmartRescueQuote(walletAddress: string, assets: any[]): Promise<RescueQuote[]> {
     const safeAddr = getAddress(walletAddress);
     
-    // 1. Group assets by chain to optimize batch processing
     const chainGroups = assets.reduce((acc: any, report: any) => {
       const asset = report.asset || report;
       const chainName = asset.chain;
@@ -46,38 +42,35 @@ export const swapExecutor = {
       if (!chain || group.tokens.length === 0) return null;
 
       try {
-        const provider = getProvider(chain.rpc);
+        const provider = getProvider(chain.name);
         
-        // 2. PARALLEL INTEL: Fetch Balance, Gas, and Relay.link Bridge Status
         const [nativeBalance, feeData, relayQuote] = await Promise.all([
           provider.getBalance(safeAddr),
           provider.getFeeData(),
           this.fetchRelayQuote(chain.id, safeAddr)
         ]);
 
-        const currentGasPrice = feeData.gasPrice || parseUnits('25', 'gwei');
-        // Standard Swap (150k) + Approval (50k) + Flashbots Buffer (100k) = 300k
-        const totalGasLimit = BigInt(group.tokens.length) * 300000n; 
+        // PRODUCTION GAS: Add 20% buffer for complex multi-hop swaps
+        const currentGasPrice = (feeData.maxFeePerGas || feeData.gasPrice || parseUnits('30', 'gwei')) * 12n / 10n;
+        const totalGasLimit = BigInt(group.tokens.length) * 350000n; 
         const estimatedGasCostWei = currentGasPrice * totalGasLimit;
 
-        // 3. DYNAMIC STRATEGY: Direct (5%) vs Relayed (7.5%) vs Bridge
-        const hasEnoughGas = nativeBalance >= (estimatedGasCostWei * 12n / 10n);
-        
+        const hasEnoughGas = nativeBalance >= (estimatedGasCostWei * 11n / 10n);
         let strategy: 'DIRECT' | 'RELAYED' | 'RELAY_BRIDGE' = hasEnoughGas ? 'DIRECT' : 'RELAYED';
         if (!hasEnoughGas && relayQuote) strategy = 'RELAY_BRIDGE';
 
         const feePercent = strategy === 'DIRECT' ? 0.05 : 0.075; 
         
-        // 4. SECURITY SCAN & PAYLOAD GENERATION
+        // SECURITY: Scan for "Drainer" signatures on spenders
         const securityChecks = await Promise.all(
           group.tokens.map((t: any) => securityService.assessSpenderRisk(t.address || t.tokenAddress, chainName))
         );
         const isRisky = securityChecks.some(s => s.isMalicious);
 
-        // Generate actual transaction payloads for the recovery
-        // Spender is typically the platform recovery wallet or a DEX router
-        const RECOVERY_SPENDER = process.env.RECOVERY_SPENDER_ADDRESS || '0x0000000000000000000000000000000000000000';
-        
+        const RECOVERY_SPENDER = process.env.RECOVERY_SPENDER_ADDRESS;
+        if (!RECOVERY_SPENDER) throw new Error("RECOVERY_SPENDER_ADDRESS env missing");
+
+        // PAYLOAD GENERATION: Build approval and transfer/swap calls
         const payloads = await Promise.all(group.tokens.map(async (token: any) => {
           return await txBuilder.buildApprovalTx(
             token.address || token.contract,
@@ -87,13 +80,14 @@ export const swapExecutor = {
           );
         }));
 
-        // 5. FINANCIAL MATH
         const totalValueUsd = group.tokens.reduce((sum: number, t: any) => sum + (t.usdValue || 0), 0);
         const platformFeeUsd = totalValueUsd * feePercent;
-        const netReceiveUsd = totalValueUsd - platformFeeUsd - (strategy === 'DIRECT' ? 0 : parseFloat(formatUnits(estimatedGasCostWei, 18)) * 2500);
+        
+        // Final Profitability Math (Gas included if Direct)
+        const gasUsd = parseFloat(formatUnits(estimatedGasCostWei, 18)) * 2500; // Average ETH price 2.5k
+        const netReceiveUsd = totalValueUsd - platformFeeUsd - (strategy === 'DIRECT' ? gasUsd : 0);
 
-        // Profitability Guard
-        if (netReceiveUsd <= 0.50) return null;
+        if (netReceiveUsd <= 0.10) return null; // Filter dust that costs more than it's worth
 
         return {
           chain: chainName,
@@ -121,9 +115,9 @@ export const swapExecutor = {
 
   async fetchRelayQuote(chainId: number, user: string) {
     try {
-      const res = await axios.get(`https://api.relay.link`, {
-        params: { chainId, user, currency: 'eth' },
-        timeout: 1500
+      const res = await axios.get('https://api.relay.link', {
+        params: { originChainId: chainId, user, destinationChainId: 10 }, // Default to Optimism for cheap bridge
+        timeout: 1200
       });
       return res.data;
     } catch {
@@ -134,8 +128,8 @@ export const swapExecutor = {
   getLabel(strategy: string) {
     const labels = {
       'DIRECT': "Direct Rescue (User pays gas)",
-      'RELAYED': "Smart Relay (Gasless - Platform funded)",
-      'RELAY_BRIDGE': "Relay.link Optimized (Instant Bridge)"
+      'RELAYED': "Flashbots Protected (Gasless - Protocol Funded)",
+      'RELAY_BRIDGE': "Bridge-Optimized Recovery"
     };
     return labels[strategy as keyof typeof labels];
   }

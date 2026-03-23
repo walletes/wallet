@@ -9,15 +9,16 @@ import { prisma } from '../../config/database.js';
 /**
  * Premium Burn Service - Tier 1 
  * Integrated with MEV-Shielding and Intelligence-driven batching.
+ * Upgraded for Production: Handles Encrypted Keys and Multi-Chain Nonce logic.
  */
 export const burnService = {
   /**
    * Dynamically handles spam burning. 
    * @param walletAddress The user's address
-   * @param privateKey Required for signing Flashbots bundles
+   * @param encryptedPrivateKey Encrypted key from DB (v1:iv:tag:cipher)
    * @param preScannedTokens Optional pre-filtered list
    */
-  async executeSpamBurn(walletAddress: string, privateKey: string, preScannedTokens?: any[]) {
+  async executeSpamBurn(walletAddress: string, encryptedPrivateKey: string, preScannedTokens?: any[]) {
     const startTime = Date.now();
     const safeAddr = walletAddress.toLowerCase();
 
@@ -42,6 +43,7 @@ export const burnService = {
       }
 
       // 2. BATCH PLANNING: Build the payloads
+      // Ensure batchBurnTokens is optimized for the latest gas prices
       const burnPlans = await batchBurnTokens(safeAddr, spamTokens);
       const executionResults = [];
 
@@ -49,11 +51,13 @@ export const burnService = {
       for (const plan of burnPlans) {
         const chain = EVM_CHAINS.find(c => c.name === plan.chain);
         
+        // Safety: Only execute if we have a valid chain config and payloads
         if (chain && plan.status === 'PROTECTED' && plan.payloads.length > 0) {
-          logger.info(`[BurnService] Sending private bundle to ${plan.chain}...`);
+          logger.info(`[BurnService] Sending ${plan.payloads.length} txs via Flashbots to ${plan.chain}...`);
           
+          // Pass the ENCRYPTED key directly; flashbotsExecution handles the decryption in-memory
           const result = await flashbotsExecution.executeBundle(
-            privateKey,
+            encryptedPrivateKey,
             chain.rpc,
             plan.payloads,
             chain.id
@@ -65,16 +69,25 @@ export const burnService = {
             error: result.error,
             txHash: result.txHash
           });
+
+          if (result.success) {
+            logger.info(`[BurnService] Successfully cleared spam on ${plan.chain}`);
+          } else {
+            logger.warn(`[BurnService] Flashbots submission failed on ${plan.chain}: ${result.error}`);
+          }
         }
       }
 
       // 4. PERSISTENCE & ANALYTICS: Update Health Score
+      // Real Money: We only reset health score if at least one burn succeeded
+      const hasSuccess = executionResults.some(r => r.success);
+      
       await prisma.wallet.update({
         where: { address: safeAddr },
         data: { 
           lastSynced: new Date(),
-          healthScore: 100,
-          riskLevel: 'LOW'
+          healthScore: hasSuccess ? 100 : undefined,
+          riskLevel: hasSuccess ? 'LOW' : undefined
         }
       }).catch((err: any) => logger.warn(`[BurnService] DB Sync skipped: ${err.message}`));
 
