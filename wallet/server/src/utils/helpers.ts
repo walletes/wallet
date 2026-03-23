@@ -1,86 +1,103 @@
+import { getAddress, isAddress } from 'ethers';
 import { logger } from './logger.js';
 import { EVM_CHAINS } from '../blockchain/chains.js';
 
 /**
- * Tier 1 Heavy Data Utility Belt
- * Features: Exponential Backoff, Address Normalization, and Explorer Routing.
+ * UPGRADED: Financial-grade Utility Engine.
+ * Features: Jitter-based backoff, Checksum-safe shortening, and Precision formatting.
  */
 export const helpers = {
   /**
-   * Pause execution (Async sleep)
+   * Safe Async Pause
    */
   sleep: (ms: number) => new Promise(resolve => setTimeout(resolve, ms)),
 
   /**
-   * Standardizes wallet addresses for UI display
+   * Checksum-safe Address Shortener.
+   * Prevents phishing by ensuring the address is valid before shortening.
    */
-  shortenAddress: (address: string) => {
-    if (!address || address.length < 10) return '0x000...000';
-    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+  shortenAddress: (address: string): string => {
+    if (!address || !isAddress(address)) return 'Invalid Address';
+    const checksummed = getAddress(address);
+    return `${checksummed.substring(0, 6)}...${checksummed.substring(checksummed.length - 4)}`;
   },
 
   /**
-   * Universal Retry Engine with Exponential Backoff
-   * Prevents system crashes during RPC congestion or Rate Limits.
+   * Advanced Retry Engine with Jitter & Exponential Backoff.
+   * Crucial for 'Real Money' apps to avoid 429 Rate Limits from RPC providers.
    */
   async retry<T>(
     fn: () => Promise<T>, 
     retries: number = 3, 
-    delay: number = 1500
+    baseDelay: number = 1000,
+    traceId: string = 'internal'
   ): Promise<T> {
     try {
       return await fn();
     } catch (err: any) {
-      // Logic: Don't retry if it's a code error (Syntax/Type)
-      const isNetworkError = err.message?.includes('timeout') || 
-                             err.message?.includes('429') || 
-                             err.message?.includes('network');
+      const status = err.response?.status || err.status;
+      const message = err.message?.toLowerCase() || '';
 
-      if (retries <= 0 || !isNetworkError) throw err;
+      // Retry logic: Only retry on network, timeout, or rate-limit (429/503) errors.
+      const isRetryable = 
+        status === 429 || 
+        status >= 500 || 
+        message.includes('timeout') || 
+        message.includes('network') ||
+        message.includes('econnreset');
 
-      logger.warn(`[RetryEngine] Attempt failed. ${retries} left. Retrying in ${delay}ms...`);
-      await new Promise(r => setTimeout(r, delay));
+      if (retries <= 0 || !isRetryable) throw err;
+
+      // Add Jitter: Prevents multiple instances from hitting the API at the exact same millisecond
+      const jitter = Math.random() * 200;
+      const nextDelay = (baseDelay * 2) + jitter;
+
+      logger.warn(`[Retry][${traceId}] Attempt failed (${status || 'Network'}). Retrying in ${Math.round(nextDelay)}ms...`);
       
-      // Exponential backoff: doubles the wait time each attempt
-      return helpers.retry(fn, retries - 1, delay * 2); 
+      await new Promise(r => setTimeout(r, nextDelay));
+      return helpers.retry(fn, retries - 1, nextDelay, traceId); 
     }
   },
 
   /**
-   * Generates a Block Explorer URL dynamically for any chain
-   * Essential for the "View on Explorer" button in your UI
+   * Secure Explorer Link Generator
    */
-  getExplorerUrl: (txHash: string, chainName: string): string => {
-    const chain = EVM_CHAINS.find(c => c.name.toLowerCase() === chainName.toLowerCase());
-    const base = chain?.explorer || 'https://etherscan.io';
-    return `${base}/tx/${txHash}`;
+  getExplorerUrl: (txHash: string, chainName: string = 'ethereum'): string => {
+    const chain = EVM_CHAINS.find(c => 
+      c.name.toLowerCase() === chainName.toLowerCase() || 
+      c.id?.toString() === chainName
+    );
+    const baseUrl = chain?.explorer || 'https://etherscan.io';
+    // Ensure no double slashes if explorer URL ends with /
+    const sanitizedBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    return `${sanitizedBase}/tx/${txHash}`;
   },
 
   /**
-   * High-precision USD Formatter
+   * High-Precision USD Formatter.
+   * Handles large whale balances ($1M+) and tiny dust (<$0.01) correctly.
    */
-  formatUsd: (value: number | string) => {
+  formatUsd: (value: number | string): string => {
     const num = typeof value === 'string' ? parseFloat(value) : value;
+    if (isNaN(num)) return '$0.00';
+
+    // For very small values (real money dust), show more decimals
+    const fractionDigits = num > 0 && num < 0.01 ? 6 : 2;
+
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-      minimumFractionDigits: 2
-    }).format(num || 0);
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits
+    }).format(num);
   }
 };
 
-export async function withRetry<T>(
-  fn: () => Promise<T>,
-  retries = 2,
-  delay = 300
-  ): Promise<T> {
-  try {
-  return await fn();
-  } catch (err) {
-  if (retries <= 0) throw err;
-  await new Promise(res => setTimeout(res, delay));
-  return withRetry(fn, retries - 1, delay);
-  }
-  }
+/**
+ * Wrapper for simpler retry logic
+ */
+export async function withRetry<T>(fn: () => Promise<T>, retries = 2): Promise<T> {
+  return helpers.retry(fn, retries);
+}
 
 export default helpers;

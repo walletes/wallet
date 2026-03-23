@@ -1,54 +1,74 @@
 import { Request, Response } from 'express';
-import { isAddress } from 'ethers';
+import { isAddress, getAddress } from 'ethers';
 import { walletService } from './wallet.service.js';
 import { logger } from '../../utils/logger.js';
+import crypto from 'crypto';
 
 /**
- * Global Wallet Scan Controller
- * Handles cross-chain asset discovery, classification, and DB sync.
+ * UPGRADED: Production-grade Global Wallet Scan Controller.
+ * Handles financial asset discovery with trace-based auditing and strict validation.
  */
 export async function scanWalletController(req: Request, res: Response) {
   const startTime = Date.now();
-  // Support both Query (GET) and Body (POST) for flexibility
-  const address = (req.query.address || req.body.address) as string;
+  const traceId = crypto.randomUUID?.() || Math.random().toString(36).substring(7);
+  
+  // Normalize input from both query and body
+  const rawAddress = (req.query.address || req.body.address) as string;
 
   try {
-    //  Stop invalid addresses before hitting APIs
-    if (!address || !isAddress(address)) {
+    // 1. Strict Validation & Checksumming
+    // Prevents loss of funds and data fragmentation by enforcing EIP-55 checksums
+    if (!rawAddress || !isAddress(rawAddress)) {
+      logger.warn(`[WalletController][${traceId}] Rejected invalid address: ${rawAddress}`);
       return res.status(400).json({
         success: false,
         error: 'A valid EVM wallet address is required',
-        received: address || 'none'
+        traceId
       });
     }
 
-    logger.info(`[Controller] Starting full scan for: ${address}`);
+    const checksummedAddress = getAddress(rawAddress);
+    logger.info(`[WalletController][${traceId}] Initiating high-priority scan: ${checksummedAddress}`);
 
-    // Execution: Call the dynamic ScanFull engine
-    const data = await walletService.scanFull(address);
+    // 2. Guaranteed Execution: Call the dynamic ScanFull engine
+    // The service layer handles the cross-chain aggregation
+    const data = await walletService.scanFull(checksummedAddress);
 
-    // 3. Metadata: Return execution time so UI can show "Scan took 2.4s"
-    const duration = (Date.now() - startTime) / 1000;
+    // 3. Financial Metadata & Performance Tracking
+    const durationMs = Date.now() - startTime;
+    const durationSec = (durationMs / 1000).toFixed(2);
 
     return res.status(200).json({
       success: true,
-      address: address.toLowerCase(),
-      timestamp: new Date().toISOString(),
-      latency: `${duration}s`,
+      meta: {
+        traceId,
+        timestamp: new Date().toISOString(),
+        latency: `${durationSec}s`,
+        processedMs: durationMs
+      },
+      address: checksummedAddress,
       data: {
         summary: data.summary,
-        groups: data.groups, // Clean, Dust, Spam
-        raw: data.all // Full list for detailed tables
+        groups: data.groups, // Categorized: Clean, Dust, Spam
+        raw: data.all        // Master list for detailed audit
       }
     });
 
   } catch (error: any) {
-    logger.error(`[Controller] Scan failed for ${address}:`, error);
+    // 4. Secure Error Masking
+    // Critical: Do not leak RPC provider keys or internal stack traces in production
+    logger.error(`[WalletController][${traceId}] Global scan failed: ${error.stack || error.message}`);
     
-    return res.status(500).json({
+    const status = error.status || 500;
+    const userMessage = status === 500 
+      ? 'Wallet synchronization failed. Our providers are currently congested.' 
+      : error.message;
+
+    return res.status(status).json({
       success: false,
-      error: 'Failed to complete wallet scan. One or more providers timed out.',
-      message: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: userMessage,
+      traceId,
+      timestamp: new Date().toISOString()
     });
   }
 }

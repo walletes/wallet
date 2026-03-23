@@ -18,7 +18,7 @@ model Wallet {
 model AutomationRule {
   id            Int      @id @default(autoincrement())
   walletAddress String
-  privateKey    String   // Stores encrypted key (iv:tag:ciphertext)
+  privateKey    String   // Stores encrypted key (iv:salt:iv:tag:ciphertext)
   chain         String
   type          String   // AUTO_BURN, AUTO_RECOVERY
   active        Boolean  @default(true)
@@ -39,29 +39,42 @@ model ApiKey {
   @@index([wallet])
 }
 
+/**
+ * UPGRADED: Financial-grade Payment tracking.
+ * Added traceId for external audits and rawAmount for blockchain precision.
+ */
 model Payment {
   id        String   @id @default(cuid())
+  traceId   String?  @unique
   wallet    String
   txHash    String?  @unique
-  amount    Float
+  amount    Float    // Display value
+  rawAmount String?  // BigInt string for precise validation
   chain     String
+  status    String   @default("PENDING") // PENDING, SUCCESS, FAILED
   confirmed Boolean  @default(false)
   createdAt DateTime @default(now())
-  @@index([wallet])
+  @@index([wallet, status])
 }
 
 model RecoveryAttempt {
   id                String   @id @default(cuid())
+  traceId           String?  @unique
   walletAddress     String
   tokenCount        Int
   estimatedTotalUsd String
-  status            String   
+  status            String   // IN_PROGRESS, COMPLETED, FAILED
   createdAt         DateTime @default(now())
   @@index([walletAddress])
 }
 
+/**
+ * UPGRADED: Atomic SystemLock.
+ * Includes ownerId to prevent stale processes from unlocking new ones.
+ */
 model SystemLock {
   id        String   @id 
   isLocked  Boolean  @default(false)
+  ownerId   String?  // UUID of the process currently holding the lock
   updatedAt DateTime @updatedAt
 }
