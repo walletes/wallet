@@ -137,7 +137,7 @@ export const paymentService = {
       logger.info(`[Payment Verified] Trace: ${payment.traceId} | Amount: $${payment.amount} | TX: ${txHash}`);
       
       const expiryDate = new Date();
-      expiryDate.setDate(expiryAt.getDate() + 30);
+      expiryDate.setDate(expiryDate.getDate() + 30);
 
       // Extract EIP-4844 Fees for Treasury Reporting
       const l1Fee = (receipt as any).l1Fee ? (receipt as any).l1Fee.toString() : '0';

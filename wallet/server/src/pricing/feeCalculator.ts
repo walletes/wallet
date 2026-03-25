@@ -11,15 +11,14 @@ export interface FeeContext {
 
 /**
  * UPGRADED: Institutional Dynamic Fee Engine (v2026.9.1 Hardened).
+ * Fixed: Converted to Class to support 'private' modifiers and strict typing.
  * Features: Zero-Hardcode Scaling, EIP-7706 Multi-Vector Awareness, and Whale OTC Logic.
- * Logic: All parameters are pulled dynamically from the environment.
  */
-export const feeCalculator = {
+export class FeeCalculator {
   /**
    * Internal Config: Fetches dynamic rates from environment or defaults.
-   * This allows the protocol to be "Future Proof" by changing rates via .env
    */
-  getRates() {
+  private getRates() {
     return {
       BASE_BPS: BigInt(process.env.FEE_BASE_BPS || 400),           // 4%
       GASLESS_PREMIUM: BigInt(process.env.FEE_GASLESS_BPS || 200),  // 2%
@@ -32,13 +31,13 @@ export const feeCalculator = {
       HARD_CAP_BPS: BigInt(process.env.FEE_MAX_BPS || 1200),
       HARD_FLOOR_BPS: BigInt(process.env.FEE_MIN_BPS || 200)
     };
-  },
+  }
 
   /**
    * Dynamic BPS Strategy (March 2026 Spec):
    * Optimizes for EIP-7706 Gas Vectors and Smart Account Batching.
    */
-  getDynamicBps(context: FeeContext): bigint {
+  public getDynamicBps(context: FeeContext): bigint {
     const rates = this.getRates();
     let bps = rates.BASE_BPS; 
 
@@ -56,34 +55,27 @@ export const feeCalculator = {
     if (bps > rates.HARD_CAP_BPS) bps = rates.HARD_CAP_BPS;
 
     return bps;
-  },
+  }
 
   /**
    * High-Precision Financial Calculation.
-   * Handles EIP-7706 Multi-Vector overhead and protocol revenue.
    */
-  calculateRescueFee(context: FeeContext) {
+  public calculateRescueFee(context: FeeContext) {
     const rates = this.getRates();
     try {
       const { amountUsd } = context;
       
-      // Precision Scaling (6 Decimals for USD parity to prevent rounding drift)
+      // Precision Scaling (6 Decimals for USD parity)
       const amountBig = BigInt(Math.floor(amountUsd * 1_000_000));
       if (amountBig === 0n) return this.errorResponse(0);
 
-      // 1. Determine Asset Tier (Whale Logic)
       const isWhale = amountUsd >= rates.WHALE_USD_THRESHOLD;
-      
-      // 2. Resolve Dynamic BPS
       let bps = this.getDynamicBps(context);
       
-      // Whale Discount: Automated OTC-competitive pricing (e.g., 25% off protocol fee)
       if (isWhale) bps = (bps * rates.WHALE_DISCOUNT_PCT) / 100n; 
 
-      // 3. Execution Math
       const feeBig = (amountBig * bps) / 10000n;
       
-      // 4. 2026 Operational Floors (Dynamic Gas Vectoring)
       const gaslessFloor = BigInt(Math.floor(rates.MIN_GASLESS_USD * 1_000_000));
       const standardFloor = 50_000n; // /usr/bin/bash.05
       
@@ -94,8 +86,6 @@ export const feeCalculator = {
         : feeBig;
       
       const userShareBig = amountBig - finalFeeBig;
-
-      // 5. Intelligence Metadata for UI
       const netProfitMargin = Number(bps) / 100;
 
       return {
@@ -112,7 +102,7 @@ export const feeCalculator = {
       logger.error(`[FeeCalculator] 2026 Precision Error: ${err.message}`);
       return this.errorResponse(context.amountUsd);
     }
-  },
+  }
 
   private resolveTierName(context: FeeContext, isWhale: boolean): string {
     if (isWhale) return 'INSTITUTIONAL_WHALE';
@@ -120,7 +110,7 @@ export const feeCalculator = {
     if (context.isSmartAccount) return 'SMART_EOA_OPTIMIZED';
     if (context.isGasless) return 'GASLESS_CONVENIENCE';
     return 'STANDARD_RETAIL';
-  },
+  }
 
   private errorResponse(amount: number) {
     return { 
@@ -132,6 +122,8 @@ export const feeCalculator = {
       timestamp: new Date().toISOString()
     };
   }
-};
+}
 
+// Export as a singleton instance to maintain my current import style
+export const feeCalculator = new FeeCalculator();
 export default feeCalculator;

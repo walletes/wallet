@@ -3,6 +3,7 @@ import { FlashbotsBundleProvider, FlashbotsBundleResolution } from '@flashbots/e
 import { logger } from '../utils/logger.js';
 import { decryptPrivateKey, clearSensitiveData } from '../utils/crypto.js';
 import { requireChain } from './chains.js';
+import 'dotenv/config';
 
 export interface BundleResult {
   success: boolean;
@@ -17,6 +18,7 @@ export interface BundleResult {
  * UPGRADED: Institutional Flashbots & MEV-Shield Engine (v2026.5).
  * Features: Multi-Relay Arbitration, EIP-4844/7706 Gas Awareness, 
  * and Strict Zero-Exposure Memory Sanitization.
+ * FIXED: Resolved Async Decryption (TS2322).
  */
 export const flashbotsExecution = {
   async executeBundle(
@@ -27,7 +29,8 @@ export const flashbotsExecution = {
   ): Promise<BundleResult> {
     
     // 1. SECURE DECRYPTION WITH AUTO-PURGE
-    let rawKey: string | null = decryptPrivateKey(encryptedPrivateKey);
+    // FIX: Added 'await' because decryptPrivateKey returns Promise<string>
+    let rawKey: string | null = await decryptPrivateKey(encryptedPrivateKey);
     
     try {
       if (!rawKey) throw new Error('KEY_DECRYPTION_FAILED');
@@ -44,7 +47,7 @@ export const flashbotsExecution = {
       const relayUrl = chainConfig.relayUrl || 
         (chainId === 1 ? 'https://relay.flashbots.net' : 
          chainId === 11155111 ? 'https://relay-sepolia.flashbots.net' : 
-         chainId === 8453 ? 'https://base.mev-relay.com' : // Base L2 Relay example
+         chainId === 8453 ? 'https://base.mev-relay.com' : 
          process.env.CUSTOM_RELAY_URL || 'https://relay.flashbots.net');
 
       // Use a randomized auth signer to prevent relay-side reputation tracking
@@ -82,7 +85,7 @@ export const flashbotsExecution = {
         return { 
           signer: userWallet as any,
           transaction: {
-            to: tx.to || undefined, // undefined for contract creation/delegation
+            to: tx.to || undefined,
             data: tx.data || '0x',
             value: txValue,
             gasLimit: txGas,
@@ -139,7 +142,7 @@ export const flashbotsExecution = {
       } 
       
       if (waitResponse === FlashbotsBundleResolution.BlockPassedWithoutInclusion) {
-        logger.warn(`[Flashbots][TIMEOUT] Target block ${targetBlock} missed. Retrying may be required.`);
+        logger.warn(`[Flashbots][TIMEOUT] Target block ${targetBlock} missed.`);
         return { success: false, error: 'BLOCK_PASSED', targetBlock };
       }
 

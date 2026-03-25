@@ -7,12 +7,13 @@ import { helpers } from '../../utils/helpers.js';
 import { z } from 'zod'; 
 import { parseUnits } from 'viem';
 import crypto from 'node:crypto';
+import { encryptPrivateKey, decryptPrivateKey } from '../../utils/crypto.js';
 
 /**
  * UPGRADED: Institutional Wallet Intelligence Service (v2026.5).
- * - Fixed: Strict Type Safety for Real-World Precision.
- * - Added: Distributed Scan Locking (Idempotency).
  * - Standards: EIP-7702 Proxy Verification & Multi-Layer Gas Reporting.
+ * - Integration: Async Cryptographic Vault for Secure Key Handling.
+ * - Helpers: Centralized Gas Formatting & Retry Resilience.
  */
 
 const AddressSchema = z.string().regex(/^0x[a-fA-F0-9]{40}$/, "Invalid EVM Address Format");
@@ -20,7 +21,7 @@ const AddressSchema = z.string().regex(/^0x[a-fA-F0-9]{40}$/, "Invalid EVM Addre
 export const walletService = {
   /**
    * HIGH-FIDELITY ASSET SCAN
-   * Uses Atomic Syncing and Circuit Breaker logic.
+   * Uses Atomic Syncing, Circuit Breaker logic, and Centralized Helpers.
    */
   async scanFull(address: string) {
     const validatedAddress = AddressSchema.parse(address).toLowerCase();
@@ -29,12 +30,12 @@ export const walletService = {
     try {
       logger.info(`[WalletService][${traceId}] Initiating Deep Intel: ${validatedAddress}`);
 
-      // 1. Parallel Intel Gathering (Hardened with Type Fallbacks)
+      // 1. Parallel Intel Gathering (Hardened with Helper Retry & Timeouts)
       const [rawAssets, securityAllowances, delegationStatus] = await Promise.all([
-        this.withTimeout(scanGlobalWallet(validatedAddress), 8000),
+        helpers.retry(() => this.withTimeout(scanGlobalWallet(validatedAddress), 8000), 2),
         securityService.scanApprovals(validatedAddress),
-        (securityService as any).getDelegationStatus?.(validatedAddress) || 
-          Promise.resolve({ isDelegated: false, isVerifiedProxy: false })
+        (securityService as any).getAccountIntegrity?.(validatedAddress) || 
+          Promise.resolve({ isDelegated: false, isVerifiedProxy: false, implementation: null })
       ]);
 
       // 2. Heavy-Duty Intelligence Engine
@@ -49,11 +50,14 @@ export const walletService = {
           balance: (categorizedData.summary?.totalUsdValue || 0).toString(),
           healthScore: risk.healthScore,
           riskLevel: risk.riskLevel,
-          isDelegated: delegationStatus.isDelegated,
+          isDelegated: !!delegationStatus.isDelegated,
+          isCompromised: risk.healthScore < 20,
+          implementation: (delegationStatus as any).implementation || null,
           metadata: { 
             indicators: risk.indicators,
             lastTraceId: traceId,
-            scanVersion: "2026.5"
+            scanVersion: "2026.5.1-PROD",
+            l1FeeLastAction: "0" 
           }
         },
         create: { 
@@ -61,12 +65,14 @@ export const walletService = {
           balance: (categorizedData.summary?.totalUsdValue || 0).toString(),
           healthScore: risk.healthScore,
           riskLevel: risk.riskLevel,
-          isDelegated: delegationStatus.isDelegated,
+          isDelegated: !!delegationStatus.isDelegated,
+          isCompromised: risk.healthScore < 20,
+          implementation: (delegationStatus as any).implementation || null,
           metadata: { indicators: risk.indicators, lastTraceId: traceId }
         }
       });
 
-      // 4. Actionable Intelligence Payload
+      // 4. Actionable Intelligence Payload (EIP-7706 Aware via Helpers)
       return {
         header: { 
           wallet: validatedAddress, 
@@ -79,16 +85,17 @@ export const walletService = {
           indicators: risk.indicators,
           isCompromised: risk.healthScore < 20,
           accountType: delegationStatus.isDelegated ? 'EIP-7702-DELEGATED' : 'EOA',
+          implementation: (delegationStatus as any).implementation || 'Native'
         },
         summary: {
           ...categorizedData.summary,
           openApprovals: securityAllowances.length,
           criticalRisks: securityAllowances.filter((a: any) => a.riskLevel === 'CRITICAL' || a.isMalicious).length,
-          // Fixed: Explicit BigInt casting for 2026 Gas Reporting
+          // Fixed: Utilizing helpers.formatGasReport for 2026 Multi-dimensional Gas
           cleanupGasEstimate: helpers.formatGasReport(
             BigInt(parseUnits('0.006', 18)), // Execution
             BigInt(parseUnits('0.002', 18)), // Blob Data
-            BigInt(parseUnits('0.0001', 18)) // L2 Fee
+            BigInt(parseUnits('0.0001', 18)) // Calldata/L1 Fee
           )
         },
         groups: categorizedData.groups || {},
@@ -108,20 +115,17 @@ export const walletService = {
     let score = 100;
     const indicators: string[] = [];
 
-    // EIP-7702 Proxy Safety Check
     if (delegation?.isDelegated && !delegation?.isVerifiedProxy) {
       score -= 55;
       indicators.push("UNVERIFIED_EIP7702_DELEGATION");
     }
 
-    // Direct Malicious Approvals
     const maliciousCount = (allowances || []).filter((a: any) => a.isMalicious).length;
     if (maliciousCount > 0) {
       score -= (maliciousCount * 45);
       indicators.push("ACTIVE_MALICIOUS_ALLOWANCE");
     }
 
-    // Phishing Hook Detection
     const poisonAssets = (data.all || []).filter((a: any) => a.hasTransferHook && a.status === 'spam');
     if (poisonAssets.length > 0) {
       score -= (poisonAssets.length * 10);
@@ -136,6 +140,17 @@ export const walletService = {
   },
 
   /**
+   * SECURE KEY PROVISIONING (Async Crypto Integration)
+   */
+  async securePrivateKey(rawKey: string): Promise<string> {
+    return await encryptPrivateKey(rawKey);
+  },
+
+  async revealPrivateKey(encryptedKey: string): Promise<string> {
+    return await decryptPrivateKey(encryptedKey);
+  },
+
+  /**
    * CACHE RETRIEVAL
    */
   async getCachedWallet(address: string) {
@@ -147,7 +162,6 @@ export const walletService = {
     
     if (!wallet) return null;
 
-    // Critical wallets must be fresher (30s) vs Clean wallets (90s)
     const threshold = wallet.riskLevel === 'CRITICAL' ? 30000 : 90000;
     const isFresh = (Date.now() - new Date(wallet.lastSynced).getTime()) < threshold;
     
