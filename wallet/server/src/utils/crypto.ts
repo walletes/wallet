@@ -4,36 +4,60 @@ import { Buffer } from 'buffer';
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12; 
 const AUTH_TAG_LENGTH = 16;
-const SALT_LENGTH = 64; // Increased salt for PBKDF2
-const PBKDF2_ITERATIONS = 100000; // OWASP recommended
+const SALT_LENGTH = 64; 
+const PBKDF2_ITERATIONS = 210000; // 2026 OWASP + NIST Hardened Standard
+const DIGEST = 'sha512';
 
 /**
- * UPGRADED: Financial-grade Encryption Utility.
- * Implements PBKDF2 Key Derivation and Zero-fill memory hygiene.
+ * UPGRADED: 2026 Institutional Cryptographic Vault.
+ * Features: Non-blocking Async KDF, HKDF Key Expansion, and Memory-Safe Buffer Wiping.
  */
-
-// Key derivation function to ensure we aren't using a "weak" hex string directly
-function deriveKey(secret: string, salt: Buffer): Buffer {
-  return crypto.pbkdf2Sync(secret, salt, PBKDF2_ITERATIONS, 32, 'sha512');
-}
 
 const MASTER_SECRET = process.env.ENCRYPTION_MASTER_SECRET || '';
-const CURRENT_VERSION = 'v2';
+const CURRENT_VERSION = 'v2.1'; 
 
 /**
- * Encrypts private keys using AES-256-GCM with unique salts per entry.
- * Format: version:salt:iv:tag:ciphertext
+ * Internal: Async Key Derivation to keep the event loop responsive.
  */
-export function encryptPrivateKey(privateKey: string): string {
-  if (!MASTER_SECRET || MASTER_SECRET.length < 32) {
-    throw new Error('CRITICAL: ENCRYPTION_MASTER_SECRET must be at least 32 characters.');
+async function deriveKeyAsync(secret: string, salt: Buffer): Promise<Buffer> {
+  if (!secret || secret.length < 32) {
+    throw new Error('CRITICAL_SECURITY_FAILURE: MASTER_SECRET_INSUFFICIENT_ENTROPY');
   }
+  return new Promise((resolve, reject) => {
+    crypto.pbkdf2(secret, salt, PBKDF2_ITERATIONS, 32, DIGEST, (err, derivedKey) => {
+      if (err) reject(err);
+      resolve(Buffer.from(derivedKey));
+    });
+  });
+}
 
+/**
+ * Synchronous Fallback for legacy initialization.
+ */
+function deriveKey(secret: string, salt: Buffer): Buffer {
+  if (!secret || secret.length < 32) {
+    throw new Error('CRITICAL_SECURITY_FAILURE: MASTER_SECRET_INSUFFICIENT_ENTROPY');
+  }
+  return crypto.pbkdf2Sync(secret, salt, PBKDF2_ITERATIONS, 32, DIGEST);
+}
+
+/**
+ * Encrypts with HKDF Key Expansion (RFC 5869).
+ */
+export async function encryptPrivateKey(privateKey: string): Promise<string> {
   const salt = crypto.randomBytes(SALT_LENGTH);
   const iv = crypto.randomBytes(IV_LENGTH);
-  const key = deriveKey(MASTER_SECRET, salt);
+  
+  // 1. Derive base key
+  const baseKey = await deriveKeyAsync(MASTER_SECRET, salt);
+  
+  // 2. Expand key using HKDF (Fixed: Convert ArrayBuffer to Buffer)
+  const expandedKey = Buffer.from(crypto.hkdfSync(DIGEST, baseKey, salt, Buffer.from('WALLET_ENC_INFO'), 32));
 
-  const cipher = crypto.createCipheriv(ALGORITHM, key, iv, {
+  // 3. Generate integrity checksum
+  const checksum = crypto.createHmac('sha256', expandedKey).update('WIP_VERIFY').digest('hex').slice(0, 8);
+
+  const cipher = crypto.createCipheriv(ALGORITHM, expandedKey, iv, {
     authTagLength: AUTH_TAG_LENGTH
   });
 
@@ -41,36 +65,51 @@ export function encryptPrivateKey(privateKey: string): string {
   encrypted += cipher.final('hex');
   const tag = cipher.getAuthTag().toString('hex');
 
-  // Securely wipe the derived key from memory
-  key.fill(0);
+  // Memory Sanitation
+  baseKey.fill(0);
+  expandedKey.fill(0);
 
-  return `${CURRENT_VERSION}:${salt.toString('hex')}:${iv.toString('hex')}:${tag}:${encrypted}`;
+  return `${CURRENT_VERSION}:${checksum}:${salt.toString('hex')}:${iv.toString('hex')}:${tag}:${encrypted}`;
 }
 
 /**
- * Decrypts with strict integrity checks and immediate memory wiping.
+ * Decrypts with Constant-Time Verification to prevent timing attacks.
  */
-export function decryptPrivateKey(encryptedString: string): string {
+export async function decryptPrivateKey(encryptedString: string): Promise<string> {
   const parts = encryptedString.split(':');
-  
-  // Support legacy v1 (4 parts) and new v2 (5 parts)
-  if (parts.length < 4) throw new Error('MALFORMED_ENCRYPTION_DATA');
+  if (parts.length < 5) throw new Error('ENCRYPTION_FORMAT_INVALID');
 
   const version = parts[0];
-  let salt: Buffer, iv: Buffer, tag: Buffer, encryptedHex: string;
+  let checksum: string, salt: Buffer, iv: Buffer, tag: Buffer, encryptedHex: string;
 
-  if (version === 'v2') {
-    salt = Buffer.from(parts[1], 'hex');
-    iv = Buffer.from(parts[2], 'hex');
-    tag = Buffer.from(parts[3], 'hex');
-    encryptedHex = parts[4];
+  if (version === 'v2.1' || version === 'v2') {
+    const offset = version === 'v2.1' ? 1 : 0;
+    checksum = version === 'v2.1' ? parts[1] : '';
+    salt = Buffer.from(parts[1 + offset], 'hex');
+    iv = Buffer.from(parts[2 + offset], 'hex');
+    tag = Buffer.from(parts[3 + offset], 'hex');
+    encryptedHex = parts[4 + offset];
   } else {
-    // Fallback for v1 if necessary, or force migration
-    throw new Error('DEPRECATION_ERROR: Please migrate v1 keys to v2.');
+    throw new Error('DEPRECATED_ALGORITHM: Migration required to v2.1');
   }
 
-  const key = deriveKey(MASTER_SECRET, salt);
-  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv, {
+  const baseKey = await deriveKeyAsync(MASTER_SECRET, salt);
+  const expandedKey = Buffer.from(crypto.hkdfSync(DIGEST, baseKey, salt, Buffer.from('WALLET_ENC_INFO'), 32));
+
+  // Integrity Check: Constant-Time comparison (Protects against Side-Channel attacks)
+  if (checksum) {
+    const check = crypto.createHmac('sha256', expandedKey).update('WIP_VERIFY').digest('hex').slice(0, 8);
+    const checkBuffer = Buffer.from(check);
+    const checksumBuffer = Buffer.from(checksum);
+    
+    if (checkBuffer.length !== checksumBuffer.length || !crypto.timingSafeEqual(checkBuffer, checksumBuffer)) {
+        baseKey.fill(0);
+        expandedKey.fill(0);
+        throw new Error('MASTER_SECRET_MISMATCH: Integrity check failed.');
+    }
+  }
+
+  const decipher = crypto.createDecipheriv(ALGORITHM, expandedKey, iv, {
     authTagLength: AUTH_TAG_LENGTH
   });
   
@@ -80,28 +119,29 @@ export function decryptPrivateKey(encryptedString: string): string {
     let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
 
-    // memory hygiene
-    key.fill(0);
+    // Memory Sanitation
+    baseKey.fill(0);
+    expandedKey.fill(0);
     salt.fill(0);
     iv.fill(0);
-    tag.fill(0);
 
     return decrypted;
   } catch (err) {
-    key.fill(0);
-    throw new Error('DECRYPTION_FAILED: Possible tampering or incorrect master secret.');
+    baseKey.fill(0);
+    expandedKey.fill(0);
+    throw new Error('DECRYPTION_CRITICAL_FAILURE: Data tampered or key invalid.');
   }
 }
 
 /**
- * Force-wipes sensitive data from Node.js Buffer memory.
+ * Force-wipes sensitive data from Node.js memory buffers.
  */
-export function clearSensitiveData(data: string | Buffer): void {
+export function clearSensitiveData(data: string | Buffer | null): void {
+  if (!data) return;
   if (Buffer.isBuffer(data)) {
     data.fill(0);
   } else if (typeof data === 'string') {
-    // Strings in V8 are immutable, but we can hint at GC
-    // In production "real money" apps, always use Buffers for secrets.
-    (data as any) = null;
+    // Strings are immutable; nullify to signal Garbage Collector
+    data = null as any;
   }
 }

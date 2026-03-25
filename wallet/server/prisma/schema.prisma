@@ -15,6 +15,8 @@ model Wallet {
   
   // --- NEW 2026 INTEL FIELDS ---
   isDelegated  Boolean           @default(false)
+  implementation String?         // EIP-7702 Logic Address
+  isCompromised Boolean          @default(false)
   metadata     Json?             // Stores { indicators: string[], traceId: string }
   
   rules        AutomationRule[]
@@ -41,30 +43,43 @@ model ApiKey {
   key          String           @unique
   wallet       String           @unique
   plan         String
+  token        String?          @db.Text // Stateless JWT for 2026 Edge Auth
+  status       String           @default("ACTIVE") // ACTIVE, REVOKED, EXPIRED
+  expiresAt    DateTime?        // Key-level expiration
+  usageLimit   Int              @default(10000)   // Quota enforcement
+  metadata     Json?            // Stores capabilities and provisioning logs
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
+  lastUsedAt   DateTime? // <-- Add this
   lastActive   DateTime         @default(now())
   usage        Int              @default(0)
   subscription ApiSubscription?
   analytics    ApiAnalytics[]
 
   @@index([wallet])
+  @@index([key])
 }
 
 model Payment {
-  id        String   @id @default(cuid())
-  traceId   String?  @unique
-  wallet    String
-  txHash    String?  @unique
-  amount    Float    
-  rawAmount String?  
-  chain     String
-  status    String   @default("PENDING") 
-  confirmed Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String   @id @default(cuid())
+  traceId         String?  @unique
+  clientReference String?  @unique // For Idempotency
+  wallet          String
+  txHash          String?  @unique
+  amount          Float    
+  rawAmount       String?  
+  token           String   @default("ETH")
+  chain           String
+  status          String   @default("PENDING") 
+  confirmed       Boolean  @default(false)
+  l1Fee           String?  @default("0") // EIP-4844 Blob Analytics
+  gasUsed         String?
+  metadata        Json?    // Detailed receipt and oracle data
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([wallet, status])
+  @@index([clientReference])
 }
 
 model RecoveryAttempt {
@@ -75,7 +90,7 @@ model RecoveryAttempt {
   estimatedTotalUsd String
   status            String   
   createdAt         DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  updatedAt         DateTime @updatedAt
 
   @@index([walletAddress])
 }
@@ -134,6 +149,8 @@ model SimulationLog {
   isSafe        Boolean
   riskScore     Int      
   diff          Json?    
+  traceId       String?  @unique
+  gasReport     Json?    // { execution: string, blob: string, calldata: string }
   createdAt     DateTime @default(now())
 
   @@index([walletAddress])
@@ -149,6 +166,7 @@ model ForensicAudit {
   simulationPayload Json     
   contractMetadata  Json     
   behaviorPatterns  Json     
+  traceId           String?  @unique
   createdAt         DateTime @default(now())
   
   @@index([walletAddress, targetAddress])
@@ -160,6 +178,7 @@ model ApiAnalytics {
   endpoint      String
   statusCode    Int
   responseTime  Int      
+  traceId       String?  
   riskDetected  Boolean  @default(false)
   gasSaved      String?  
   createdAt     DateTime @default(now())
