@@ -78,3 +78,113 @@ model SystemLock {
   ownerId   String?  // UUID of the process currently holding the lock
   updatedAt DateTime @updatedAt
 }
+
+/**
+ * DYNAMIC MONETIZATION: 30-Day Auto-Pilot.
+ * This extends the ApiKey logic to handle the 0/1,000 requests limit.
+ */
+model ApiSubscription {
+  id            String    @id @default(cuid())
+  apiKeyId      String    @unique
+  planType      String    @default("BASIC") // 0 Plan
+  requestLimit  Int       @default(1000)
+  currentUsage  Int       @default(0)
+  
+  // The 30-Day Window
+  startsAt      DateTime  @default(now())
+  endsAt        DateTime  // Logic: set to now() + 30 days on payment
+  
+  isActive      Boolean   @default(true)
+  autoRenew     Boolean   @default(false)
+  
+  apiKey        ApiKey    @relation(fields: [apiKeyId], references: [id])
+}
+
+/**
+ * SECURITY INTELLIGENCE: 10-10 Poison Detection.
+ * Stores identified vanity spoofing patterns to protect all users/devs.
+ */
+model ThreatIntel {
+  id          String   @id @default(cuid())
+  pattern     String   @unique // The '10-10' character string or full address
+  threatType  String   // POISON_ADDRESS, GAS_SIPHON, HONEYPOT
+  riskLevel   Int      @default(90)
+  detectedAt  DateTime @default(now())
+  occurrences Int      @default(1)
+  
+  @@index([pattern])
+}
+
+/**
+ * DELEGATED EXECUTION: Scoped Session Keys.
+ * Allows the Butler to work while the user is offline without full custody.
+ */
+model SessionKey {
+  id            String   @id @default(cuid())
+  walletAddress String
+  publicKey     String
+  encryptedKey  String   // Scoped key (iv:salt:tag:ciphertext)
+  permissions   Json     // { "burn": true, "recover": true, "maxGas": "0.01" }
+  expiresAt     DateTime
+  isActive      Boolean  @default(true)
+  
+  wallet        Wallet   @relation(fields: [walletAddress], references: [address])
+  @@index([walletAddress, isActive])
+}
+
+/**
+ * EXECUTION AUDIT: Simulation Logs.
+ * Records every pre-flight check for the "Net-Zero" rule.
+ */
+model SimulationLog {
+  id            String   @id @default(cuid())
+  walletAddress String
+  txHash        String?
+  isSafe        Boolean
+  riskScore     Int      // 0-100
+  diff          Json?    // State changes detected
+  createdAt     DateTime @default(now())
+
+  @@index([walletAddress])
+}
+
+/**
+ * ENHANCED: Forensic Simulation Metadata.
+ * Stores the "Rich Data" for developer dashboards and user audits.
+ */
+model ForensicAudit {
+  id                String   @id @default(cuid())
+  walletAddress     String
+  targetAddress     String   // The contract/token being interacted with
+  
+  // High-Level Result
+  isSafe            Boolean
+  riskScore         Int      // 0-100
+  verdict           String   // e.g., "BLOCK_HONEYPOT", "WARN_GAS_TRAP"
+  
+  // Structured Forensic Data (The JSON Report)
+  simulationPayload Json     // Stores internalCalls, gasEstimates, stateDiffs
+  contractMetadata  Json     // Stores owner, factoryInfo, functionAnalysis
+  behaviorPatterns  Json     // Stores honeypotFlag, approvalTrap, etc.
+  
+  createdAt         DateTime @default(now())
+  
+  @@index([walletAddress, targetAddress])
+}
+
+/**
+ * NEW: Developer Usage Analytics.
+ * Powers the "Developer Dashboard" with charts and heatmaps.
+ */
+model ApiAnalytics {
+  id            String   @id @default(cuid())
+  apiKeyId      String
+  endpoint      String
+  statusCode    Int
+  responseTime  Int      // in milliseconds
+  riskDetected  Boolean  @default(false)
+  gasSaved      String?  // Total gas WIP saved the dev's user
+  createdAt     DateTime @default(now())
+
+  @@index([apiKeyId, createdAt])
+}
