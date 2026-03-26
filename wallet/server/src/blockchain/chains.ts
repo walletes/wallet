@@ -1,9 +1,5 @@
 import 'dotenv/config';
 
-/* ==========
-   CORE INTERFACES & CONFIG
-   ========== */
-
 export interface ChainConfig {
   id: number;
   name: string;
@@ -22,15 +18,15 @@ export interface ChainConfig {
 const ALCHEMY_KEY: string = process.env.ALCHEMY_KEY || process.env.ALCHEMY_API_KEY || '';
 
 /**
- * Intelligent Multi-RPC Resolver
- * Logic: [User Override] -> [Alchemy Premium] -> [High-Availability Public Cluster]
+ * multi-RPC Resolver
+ * [User Override] -> [Alchemy Premium] -> [High-Availability Public Cluster]
  */
 const getRpcs = (chainId: number, fallbacks: string[], alchemyAlias?: string): string[] => {
   const rpcs = [...fallbacks];
   const envOverride = process.env[`RPC_${chainId}`];
   if (envOverride) rpcs.unshift(envOverride); 
   if (ALCHEMY_KEY && alchemyAlias) {
-    rpcs.unshift(`https://${alchemyAlias}://{ALCHEMY_KEY}`);
+  rpcs.unshift(`https://${alchemyAlias}.g.alchemy.com/v2/${ALCHEMY_KEY}`);
   }
   return [...new Set(rpcs)];
 };
