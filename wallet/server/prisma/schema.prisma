@@ -27,7 +27,8 @@ model Wallet {
 model AutomationRule {
   id            Int      @id @default(autoincrement())
   walletAddress String
-  privateKey    String   
+  privateKey    String
+  lastError     String? 
   chain         String
   chainId       Int
   type          String   
