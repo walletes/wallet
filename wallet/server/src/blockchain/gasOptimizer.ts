@@ -1,9 +1,11 @@
 import { logger } from '../utils/logger.js';
 import { ethers } from 'ethers';
 import { requireChain } from './chains.js';
+import { getHealthyProvider } from './provider.js';
 
 /**
  * UPGRADED: High-Precision Gas Optimizer (Finance Grade)
+ * Integration: Fully linked to getHealthyProvider for latency-optimized fee data.
  * Features: EIP-1559 Dynamic Bumping, L2 Overhead Awareness, 
  * and strict 1-20 Gwei safety clamping for cost control.
  */
@@ -25,7 +27,9 @@ export const gasOptimizer = {
 
     try {
       const chainConfig = requireChain(chainId);
-      const provider = new ethers.JsonRpcProvider(chainConfig.rpc);
+      
+      // ⚡ UPGRADE: Use the Intelligence Engine to get the fastest healthy provider
+      const provider = await getHealthyProvider(chainId);
       
       // 1. Concurrent Data Fetching (Block + FeeData)
       const [feeData, latestBlock] = await Promise.all([
@@ -60,7 +64,8 @@ export const gasOptimizer = {
       const isL2 = chainConfig.isL2 || false;
 
       // 5. AGGRESSIVE GAS LIMIT SCALING
-      const gasLimitMultiplier = isL2 ? 1.3 : 1.15;
+      // Increased for L2s to account for L1 settlement variability
+      const gasLimitMultiplier = isL2 ? 1.35 : 1.15;
 
       let finalGasPrice = feeData.gasPrice;
       if (!chainConfig.supportsEIP1559 && feeData.gasPrice) {
@@ -75,12 +80,13 @@ export const gasOptimizer = {
         gasPrice: finalGasPrice,
         gasLimitMultiplier,
         strategy: isL2 ? 'L2_BATCH_AWARE' : (chainConfig.supportsEIP1559 ? 'EIP1559_AGGRESSIVE' : 'LEGACY_BUMPED'),
+        chainId: chainConfig.id,
         timestamp: Date.now(),
         isCongested
       };
     } catch (err: any) {
-      logger.error(`[GasOptimizer] Critical Fee Fetch Error: ${err.message}`);
-      // Return safe 2026 fallbacks (1-2 Gwei range)
+      logger.error(`[GasOptimizer] Critical Fee Fetch Error for Chain ${chainId}: ${err.message}`);
+      // Return safe fallbacks (1-2 Gwei range)
       return {
         gasPrice: ethers.parseUnits('1.5', 'gwei'),
         maxFeePerGas: ethers.parseUnits('2.0', 'gwei'),

@@ -1,13 +1,17 @@
 import 'dotenv/config';
 
+/* ==========
+   CORE INTERFACES & CONFIG
+   ========== */
+
 export interface ChainConfig {
   id: number;
   name: string;
   symbol: string;
-  rpc: string;
+  rpcs: string[];
   relayUrl?: string;
   alchemy?: string;
-  moralis?: string | null;
+  moralis?: string; 
   explorer: string;
   isL2?: boolean;
   blockTimeSec: number;
@@ -17,64 +21,141 @@ export interface ChainConfig {
 
 const ALCHEMY_KEY: string = process.env.ALCHEMY_KEY || process.env.ALCHEMY_API_KEY || '';
 
-const getDynamicRpc = (chainId: number, publicRpc: string, alchemyAlias?: string): string => {
+/**
+ * Intelligent Multi-RPC Resolver
+ * Logic: [User Override] -> [Alchemy Premium] -> [High-Availability Public Cluster]
+ */
+const getRpcs = (chainId: number, fallbacks: string[], alchemyAlias?: string): string[] => {
+  const rpcs = [...fallbacks];
   const envOverride = process.env[`RPC_${chainId}`];
-  if (envOverride) return envOverride;
+  if (envOverride) rpcs.unshift(envOverride); 
   if (ALCHEMY_KEY && alchemyAlias) {
-    return `https://${alchemyAlias}.g.alchemy.com/v2/${ALCHEMY_KEY}`;
+    rpcs.unshift(`https://${alchemyAlias}://{ALCHEMY_KEY}`);
   }
-  return publicRpc;
+  return [...new Set(rpcs)];
 };
+
+/* ====== */
 
 export const EVM_CHAINS: ChainConfig[] = [
-  { id: 1, name: 'Ethereum', symbol: 'ETH', rpc: getDynamicRpc(1, 'https://eth.drpc.org', 'eth-mainnet'), relayUrl: 'https://relay.flashbots.net', alchemy: 'eth-mainnet', explorer: 'https://etherscan.io', isL2: false, blockTimeSec: 12, nativePriceId: 'ethereum', supportsEIP1559: true },
-  { id: 56, name: 'BNB Smart Chain', symbol: 'BNB', rpc: getDynamicRpc(56, 'https://binance.drpc.org'), explorer: 'https://bscscan.com', isL2: false, blockTimeSec: 3, nativePriceId: 'binancecoin', supportsEIP1559: false },
-  { id: 137, name: 'Polygon', symbol: 'POL', rpc: getDynamicRpc(137, 'https://polygon-rpc.com', 'polygon-mainnet'), alchemy: 'polygon-mainnet', explorer: 'https://polygonscan.com', isL2: true, blockTimeSec: 2, nativePriceId: 'matic-network', supportsEIP1559: true },
-  { id: 8453, name: 'Base', symbol: 'ETH', rpc: getDynamicRpc(8453, 'https://mainnet.base.org', 'base-mainnet'), alchemy: 'base-mainnet', explorer: 'https://basescan.org', isL2: true, blockTimeSec: 2, nativePriceId: 'ethereum', supportsEIP1559: true },
-  { id: 42161, name: 'Arbitrum One', symbol: 'ETH', rpc: getDynamicRpc(42161, 'https://arb1.arbitrum.io', 'arb-mainnet'), alchemy: 'arb-mainnet', explorer: 'https://arbiscan.io', isL2: true, blockTimeSec: 0.3, nativePriceId: 'ethereum', supportsEIP1559: true },
-  { id: 10, name: 'Optimism', symbol: 'ETH', rpc: getDynamicRpc(10, 'https://mainnet.optimism.io', 'opt-mainnet'), alchemy: 'opt-mainnet', explorer: 'https://optimistic.etherscan.io', isL2: true, blockTimeSec: 2, nativePriceId: 'ethereum', supportsEIP1559: true },
-  { id: 43114, name: 'Avalanche', symbol: 'AVAX', rpc: getDynamicRpc(43114, 'https://api.avax.network'), explorer: 'https://snowtrace.io', isL2: false, blockTimeSec: 2, nativePriceId: 'avalanche-2', supportsEIP1559: true },
-  { id: 81457, name: 'Blast', symbol: 'ETH', rpc: getDynamicRpc(81457, 'https://rpc.blast.io'), explorer: 'https://blastscan.io', isL2: true, blockTimeSec: 2, nativePriceId: 'ethereum', supportsEIP1559: true },
-  { id: 59144, name: 'Linea', symbol: 'ETH', rpc: getDynamicRpc(59144, 'https://rpc.linea.build'), explorer: 'https://lineascan.build', isL2: true, blockTimeSec: 12, nativePriceId: 'ethereum', supportsEIP1559: true },
-  { id: 534352, name: 'Scroll', symbol: 'ETH', rpc: getDynamicRpc(534352, 'https://rpc.scroll.io'), explorer: 'https://scrollscan.com', isL2: true, blockTimeSec: 3, nativePriceId: 'ethereum', supportsEIP1559: true },
-  { id: 100, name: 'Gnosis', symbol: 'xDAI', rpc: getDynamicRpc(100, 'https://rpc.gnosischain.com'), explorer: 'https://gnosisscan.io', isL2: false, blockTimeSec: 5, nativePriceId: 'xdai', supportsEIP1559: true },
-  { id: 250, name: 'Fantom', symbol: 'FTM', rpc: getDynamicRpc(250, 'https://rpc.ftm.tools'), explorer: 'https://ftmscan.com', isL2: false, blockTimeSec: 1, nativePriceId: 'fantom', supportsEIP1559: false },
-  { id: 324, name: 'zkSync Era', symbol: 'ETH', rpc: getDynamicRpc(324, 'https://mainnet.era.zksync.io'), explorer: 'https://explorer.zksync.io', isL2: true, blockTimeSec: 1, nativePriceId: 'ethereum', supportsEIP1559: true },
-  { id: 1101, name: 'Polygon zkEVM', symbol: 'ETH', rpc: getDynamicRpc(1101, 'https://zkevm-rpc.com'), explorer: 'https://zkevm.polygonscan.com', isL2: true, blockTimeSec: 2, nativePriceId: 'ethereum', supportsEIP1559: true },
-  { id: 42220, name: 'Celo', symbol: 'CELO', rpc: getDynamicRpc(42220, 'https://forno.celo.org'), explorer: 'https://celoscan.io', blockTimeSec: 5, nativePriceId: 'celo', supportsEIP1559: true },
-  { id: 1284, name: 'Moonbeam', symbol: 'GLMR', rpc: getDynamicRpc(1284, 'https://rpc.api.moonbeam.network'), explorer: 'https://moonscan.io', blockTimeSec: 12, nativePriceId: 'moonbeam', supportsEIP1559: true },
-  { id: 1285, name: 'Moonriver', symbol: 'MOVR', rpc: getDynamicRpc(1285, 'https://rpc.api.moonriver.moonbeam.network'), explorer: 'https://moonriver.moonscan.io', blockTimeSec: 12, nativePriceId: 'moonriver', supportsEIP1559: true },
-  { id: 5000, name: 'Mantle', symbol: 'MNT', rpc: getDynamicRpc(5000, 'https://rpc.mantle.xyz'), explorer: 'https://explorer.mantle.xyz', blockTimeSec: 2, nativePriceId: 'mantle', supportsEIP1559: false },
-  { id: 204, name: 'opBNB', symbol: 'BNB', rpc: getDynamicRpc(204, 'https://opbnb-mainnet-rpc.bnbchain.org'), explorer: 'https://opbnbscan.com', blockTimeSec: 1, nativePriceId: 'binancecoin', supportsEIP1559: false },
-  { id: 146, name: 'Sonic', symbol: 'S', rpc: getDynamicRpc(146, 'https://rpc.soniclabs.com'), explorer: 'https://sonicscan.org', blockTimeSec: 0.4, nativePriceId: 'fantom', supportsEIP1559: true },
-  { id: 1329, name: 'Sei', symbol: 'SEI', rpc: getDynamicRpc(1329, 'https://evm-rpc.sei.io'), explorer: 'https://seitrace.com', blockTimeSec: 0.4, nativePriceId: 'sei-network', supportsEIP1559: false },
-  { id: 25, name: 'Cronos', symbol: 'CRO', rpc: getDynamicRpc(25, 'https://evm.cronos.org'), explorer: 'https://cronoscan.com', blockTimeSec: 6, nativePriceId: 'crypto-com-chain', supportsEIP1559: true },
-  { id: 42170, name: 'Arbitrum Nova', symbol: 'ETH', rpc: getDynamicRpc(42170, 'https://nova.arbitrum.io'), explorer: 'https://nova.arbiscan.io', blockTimeSec: 1, nativePriceId: 'ethereum', supportsEIP1559: true },
-  { id: 1088, name: 'Metis', symbol: 'METIS', rpc: getDynamicRpc(1088, 'https://andromeda.metis.io'), explorer: 'https://andromeda-explorer.metis.io', blockTimeSec: 2, nativePriceId: 'metis-token', supportsEIP1559: false },
-  { id: 2222, name: 'Kava', symbol: 'KAVA', rpc: getDynamicRpc(2222, 'https://evm.kava.io'), explorer: 'https://kavascan.com', blockTimeSec: 6, nativePriceId: 'kava', supportsEIP1559: false },
-  { id: 34443, name: 'Mode', symbol: 'ETH', rpc: getDynamicRpc(34443, 'https://mainnet.mode.network'), explorer: 'https://modescan.io', blockTimeSec: 2, nativePriceId: 'ethereum', supportsEIP1559: true },
-  { id: 167000, name: 'Taiko', symbol: 'ETH', rpc: getDynamicRpc(167000, 'https://rpc.mainnet.taiko.xyz'), explorer: 'https://taikoscan.io', blockTimeSec: 12, nativePriceId: 'ethereum', supportsEIP1559: true },
-  { id: 55, name: 'Zircuit', symbol: 'ETH', rpc: getDynamicRpc(55, 'https://zircuit-mainnet.drpc.org'), explorer: 'https://explorer.zircuit.com', blockTimeSec: 2, nativePriceId: 'ethereum', supportsEIP1559: true },
-  { id: 7777777, name: 'Zora', symbol: 'ETH', rpc: getDynamicRpc(7777777, 'https://rpc.zora.energy'), explorer: 'https://explorer.zora.energy', blockTimeSec: 2, nativePriceId: 'ethereum', supportsEIP1559: true },
-  { id: 480, name: 'World Chain', symbol: 'ETH', rpc: getDynamicRpc(480, 'https://worldchain-mainnet.g.alchemy.com', 'worldchain-mainnet'), explorer: 'https://worldscan.org', isL2: true, blockTimeSec: 2, nativePriceId: 'ethereum', supportsEIP1559: true }
+ 
+  { id: 1, name: 'Ethereum', symbol: 'ETH', rpcs: getRpcs(1, ['https://eth.drpc.org', 'https://rpc.ankr.com'], 'eth-mainnet'), relayUrl: 'https://relay.flashbots.net', explorer: 'https://etherscan.io', isL2: false, blockTimeSec: 12, nativePriceId: 'ethereum', supportsEIP1559: true },
+  { id: 56, name: 'BNB Smart Chain', symbol: 'BNB', rpcs: getRpcs(56, ['https://binance.llamarpc.com', 'https://bsc-dataseed.binance.org']), explorer: 'https://bscscan.com', isL2: false, blockTimeSec: 3, nativePriceId: 'binancecoin', supportsEIP1559: false },
+  { id: 137, name: 'Polygon', symbol: 'POL', rpcs: getRpcs(137, ['https://polygon.drpc.org', 'https://rpc.ankr.com'], 'polygon-mainnet'), explorer: 'https://polygonscan.com', isL2: false, blockTimeSec: 2, nativePriceId: 'matic-network', supportsEIP1559: true },
+  { id: 8453, name: 'Base', symbol: 'ETH', rpcs: getRpcs(8453, ['https://mainnet.base.org', 'https://base.drpc.org'], 'base-mainnet'), explorer: 'https://basescan.org', isL2: true, blockTimeSec: 2, nativePriceId: 'ethereum', supportsEIP1559: true },
+  { id: 42161, name: 'Arbitrum One', symbol: 'ETH', rpcs: getRpcs(42161, ['https://arbitrum.drpc.org', 'https://arb1.arbitrum.io'], 'arb-mainnet'), explorer: 'https://arbiscan.io', isL2: true, blockTimeSec: 0.3, nativePriceId: 'ethereum', supportsEIP1559: true },
+  { id: 10, name: 'Optimism', symbol: 'ETH', rpcs: getRpcs(10, ['https://optimism.drpc.org', 'https://mainnet.optimism.io'], 'opt-mainnet'), explorer: 'https://optimistic.etherscan.io', isL2: true, blockTimeSec: 2, nativePriceId: 'ethereum', supportsEIP1559: true },
+
+  { id: 43114, name: 'Avalanche', symbol: 'AVAX', rpcs: getRpcs(43114, ['https://avalanche.drpc.org', 'https://rpc.ankr.com'], 'avax-mainnet'), explorer: 'https://snowtrace.io', isL2: false, blockTimeSec: 2, nativePriceId: 'avalanche-2', supportsEIP1559: true },
+  { id: 324, name: 'zkSync Era', symbol: 'ETH', rpcs: getRpcs(324, ['https://mainnet.era.zksync.io', 'https://zksync.drpc.org'], 'zksync-mainnet'), explorer: 'https://explorer.zksync.io', isL2: true, blockTimeSec: 1, nativePriceId: 'ethereum', supportsEIP1559: true },
+  { id: 146, name: 'Sonic', symbol: 'S', rpcs: ['https://rpc.soniclabs.com', 'https://sonic.drpc.org'], explorer: 'https://sonicscan.org', blockTimeSec: 0.4, nativePriceId: 'fantom', supportsEIP1559: true },
+  { id: 1329, name: 'Sei Network', symbol: 'SEI', rpcs: ['https://sei-rpc.brochain.org', 'https://sei.drpc.org'], explorer: 'https://seitrace.com', blockTimeSec: 0.4, nativePriceId: 'sei-network', supportsEIP1559: false },
+  { id: 59144, name: 'Linea', symbol: 'ETH', rpcs: getRpcs(59144, ['https://linea.drpc.org', 'https://rpc.linea.build'], 'linea-mainnet'), explorer: 'https://lineascan.build', isL2: true, blockTimeSec: 12, nativePriceId: 'ethereum', supportsEIP1559: true },
+  { id: 81457, name: 'Blast', symbol: 'ETH', rpcs: ['https://blast.drpc.org', 'https://rpc.blast.io'], explorer: 'https://blastscan.io', isL2: true, blockTimeSec: 2, nativePriceId: 'ethereum', supportsEIP1559: true },
+  { id: 534352, name: 'Scroll', symbol: 'ETH', rpcs: ['https://rpc.scroll.io', 'https://scroll.drpc.org'], explorer: 'https://scrollscan.com', isL2: true, blockTimeSec: 3, nativePriceId: 'ethereum', supportsEIP1559: true },
+  { id: 5000, name: 'Mantle', symbol: 'MNT', rpcs: ['https://rpc.mantle.xyz', 'https://mantle.drpc.org'], explorer: 'https://explorer.mantle.xyz', isL2: true, blockTimeSec: 2, nativePriceId: 'mantle', supportsEIP1559: false },
+  { id: 1101, name: 'Polygon zkEVM', symbol: 'ETH', rpcs: ['https://zkevm-rpc.com'], explorer: 'https://zkevm.polygonscan.com', isL2: true, blockTimeSec: 2, nativePriceId: 'ethereum', supportsEIP1559: true },
+  { id: 42220, name: 'Celo', symbol: 'CELO', rpcs: ['https://forno.celo.org', 'https://celo.drpc.org'], explorer: 'https://celoscan.io', blockTimeSec: 5, nativePriceId: 'celo', supportsEIP1559: true },
+  { id: 100, name: 'Gnosis', symbol: 'xDAI', rpcs: ['https://rpc.gnosischain.com', 'https://gnosis.drpc.org'], explorer: 'https://gnosisscan.io', blockTimeSec: 5, nativePriceId: 'xdai', supportsEIP1559: true },
+  { id: 250, name: 'Fantom', symbol: 'FTM', rpcs: ['https://rpc.ftm.tools', 'https://fantom.drpc.org'], explorer: 'https://ftmscan.com', blockTimeSec: 1, nativePriceId: 'fantom', supportsEIP1559: false },
+  { id: 1284, name: 'Moonbeam', symbol: 'GLMR', rpcs: ['https://rpc.api.moonbeam.network'], explorer: 'https://moonscan.io', blockTimeSec: 12, nativePriceId: 'moonbeam', supportsEIP1559: true },
+  { id: 1285, name: 'Moonriver', symbol: 'MOVR', rpcs: ['https://rpc.api.moonriver.network'], explorer: 'https://moonriver.moonscan.io', blockTimeSec: 12, nativePriceId: 'moonriver', supportsEIP1559: true },
+  { id: 25, name: 'Cronos', symbol: 'CRO', rpcs: ['https://evm.cronos.org'], explorer: 'https://cronoscan.com', blockTimeSec: 6, nativePriceId: 'crypto-com-chain', supportsEIP1559: true },
+  { id: 196, name: 'X Layer', symbol: 'OKB', rpcs: ['https://xlayer-rpc.okx.com'], explorer: 'https://www.okx.com', isL2: true, blockTimeSec: 2, nativePriceId: 'okb', supportsEIP1559: true },
+  { id: 167000, name: 'Taiko', symbol: 'ETH', rpcs: ['https://rpc.mainnet.taiko.xyz'], explorer: 'https://taikoscan.io', isL2: true, blockTimeSec: 12, nativePriceId: 'ethereum', supportsEIP1559: true },
+  { id: 204, name: 'opBNB', symbol: 'BNB', rpcs: ['https://opbnb-mainnet-rpc.bnbchain.org'], explorer: 'https://opbnb.bscscan.com', isL2: true, blockTimeSec: 1, nativePriceId: 'binancecoin', supportsEIP1559: false },
+  { id: 1088, name: 'Metis', symbol: 'METIS', rpcs: ['https://andromeda.metis.io'], explorer: 'https://andromeda-explorer.metis.io', isL2: true, blockTimeSec: 2, nativePriceId: 'metis-token', supportsEIP1559: false },
+  { id: 88888, name: 'Chiliz', symbol: 'CHZ', rpcs: ['https://rpc.chiliz.com'], explorer: 'https://chiliscan.com', blockTimeSec: 3, nativePriceId: 'chiliz', supportsEIP1559: true },
+  { id: 1116, name: 'Core', symbol: 'CORE', rpcs: ['https://rpc.coredao.org'], explorer: 'https://scan.coredao.org', blockTimeSec: 3, nativePriceId: 'coredaoorg', supportsEIP1559: true },
+  { id: 480, name: 'World Chain', symbol: 'ETH', rpcs: ['https://worldchain-mainnet.g.alchemy.com'], explorer: 'https://worldscan.org', isL2: true, blockTimeSec: 2, nativePriceId: 'ethereum', supportsEIP1559: true },
+  { id: 9001, name: 'Evmos', symbol: 'EVMOS', rpcs: ['https://evmos-evm-rpc.publicnode.com'], explorer: 'https://escan.live', blockTimeSec: 2, nativePriceId: 'evmos', supportsEIP1559: true },
+  { id: 7700, name: 'Canto', symbol: 'CANTO', rpcs: ['https://canto.drpc.org'], explorer: 'https://cantoscan.com', blockTimeSec: 6, nativePriceId: 'canto', supportsEIP1559: true },
+  { id: 2222, name: 'Kava EVM', symbol: 'KAVA', rpcs: ['https://evm.kava.io'], explorer: 'https://kavascan.com', blockTimeSec: 6, nativePriceId: 'kava', supportsEIP1559: true },
+  { id: 122, name: 'Fuse', symbol: 'FUSE', rpcs: ['https://rpc.fuse.io'], explorer: 'https://explorer.fuse.io', blockTimeSec: 5, nativePriceId: 'fuse-network-token', supportsEIP1559: false },
+  { id: 40, name: 'Telos EVM', symbol: 'TLOS', rpcs: ['https://mainnet.telos.net'], explorer: 'https://teloscan.io', blockTimeSec: 0.5, nativePriceId: 'telos', supportsEIP1559: true },
+  { id: 30, name: 'Rootstock', symbol: 'RBTC', rpcs: ['https://public-node.rsk.co'], explorer: 'https://explorer.rsk.co', blockTimeSec: 30, nativePriceId: 'rootstock', supportsEIP1559: false },
+  { id: 61, name: 'Ethereum Classic', symbol: 'ETC', rpcs: ['https://etc.rivet.link'], explorer: 'https://etcscan.org', blockTimeSec: 13, nativePriceId: 'ethereum-classic', supportsEIP1559: false },
+  { id: 106, name: 'Velas', symbol: 'VLX', rpcs: ['https://evmexplorer.velas.com'], explorer: 'https://evmexplorer.velas.com', blockTimeSec: 2, nativePriceId: 'velas', supportsEIP1559: true },
+  { id: 57, name: 'Syscoin', symbol: 'SYS', rpcs: ['https://rpc.syscoin.org'], explorer: 'https://explorer.syscoin.org', blockTimeSec: 150, nativePriceId: 'syscoin', supportsEIP1559: true },
+  { id: 2020, name: 'Ronin', symbol: 'RON', rpcs: ['https://api.roninchain.com'], explorer: 'https://app.roninchain.com', blockTimeSec: 3, nativePriceId: 'ronin', supportsEIP1559: true },
+  { id: 288, name: 'Boba Network', symbol: 'ETH', rpcs: ['https://mainnet.boba.network'], explorer: 'https://bobascan.com', isL2: true, blockTimeSec: 2, nativePriceId: 'ethereum', supportsEIP1559: true },
+  { id: 1024, name: 'CLV', symbol: 'CLV', rpcs: ['https://rpc-iris.clv.org'], explorer: 'https://clvscan.com', blockTimeSec: 12, nativePriceId: 'clv', supportsEIP1559: true },
+  { id: 4689, name: 'IoTeX', symbol: 'IOTX', rpcs: ['https://babel-api.mainnet.iotex.io'], explorer: 'https://iotexscan.io', blockTimeSec: 5, nativePriceId: 'iotex', supportsEIP1559: true },
+  { id: 2000, name: 'Dogechain', symbol: 'DOGE', rpcs: ['https://rpc.dogechain.dog'], explorer: 'https://explorer.dogechain.dog', blockTimeSec: 2, nativePriceId: 'dogechain', supportsEIP1559: true },
+  { id: 42170, name: 'Arbitrum Nova', symbol: 'ETH', rpcs: ['https://nova.arbitrum.io'], explorer: 'https://nova.arbiscan.io', isL2: true, blockTimeSec: 0.3, nativePriceId: 'ethereum', supportsEIP1559: true },
+  { id: 55, name: 'Zilliqa EVM', symbol: 'ZIL', rpcs: ['https://api.zilliqa.com'], explorer: 'https://viewblock.io', blockTimeSec: 45, nativePriceId: 'zilliqa', supportsEIP1559: false },
+  { id: 14, name: 'Flare', symbol: 'FLR', rpcs: ['https://flare-api.flare.network'], explorer: 'https://flare-explorer.flare.network', blockTimeSec: 2, nativePriceId: 'flare-networks', supportsEIP1559: true },
+  { id: 19, name: 'Songbird', symbol: 'SGB', rpcs: ['https://songbird-api.flare.network'], explorer: 'https://songbird-explorer.flare.network', blockTimeSec: 2, nativePriceId: 'songbird', supportsEIP1559: true },
+  { id: 5, name: 'Goerli', symbol: 'ETH', rpcs: ['https://rpc.ankr.com'], explorer: 'https://goerli.etherscan.io', blockTimeSec: 12, nativePriceId: 'ethereum', supportsEIP1559: true },
+  { id: 11155111, name: 'Sepolia', symbol: 'ETH', rpcs: ['https://rpc.sepolia.org'], explorer: 'https://sepolia.etherscan.io', blockTimeSec: 12, nativePriceId: 'ethereum', supportsEIP1559: true },
+  { id: 84532, name: 'Base Sepolia', symbol: 'ETH', rpcs: ['https://sepolia.base.org'], explorer: 'https://sepolia.basescan.org', isL2: true, blockTimeSec: 2, nativePriceId: 'ethereum', supportsEIP1559: true },
+  { id: 421614, name: 'Arbitrum Sepolia', symbol: 'ETH', rpcs: ['https://sepolia-rollup.arbitrum.io'], explorer: 'https://sepolia.arbiscan.io', isL2: true, blockTimeSec: 0.3, nativePriceId: 'ethereum', supportsEIP1559: true },
+  { id: 11155420, name: 'OP Sepolia', symbol: 'ETH', rpcs: ['https://sepolia.optimism.io'], explorer: 'https://sepolia-optimism.etherscan.io', isL2: true, blockTimeSec: 2, nativePriceId: 'ethereum', supportsEIP1559: true },
+  { id: 80002, name: 'Polygon Amoy', symbol: 'POL', rpcs: ['https://rpc-amoy.polygon.technology'], explorer: 'https://amoy.polygonscan.com', blockTimeSec: 2, nativePriceId: 'matic-network', supportsEIP1559: true },
+  { id: 97, name: 'BNB Testnet', symbol: 'tBNB', rpcs: ['https://bsc-testnet.drpc.org'], explorer: 'https://testnet.bscscan.com', blockTimeSec: 3, nativePriceId: 'binancecoin', supportsEIP1559: false },
+  { id: 1337, name: 'Localhost', symbol: 'ETH', rpcs: ['http://127.0.0.1:8545'], explorer: '', blockTimeSec: 1, nativePriceId: 'ethereum', supportsEIP1559: true }
 ];
 
-export const getChainById = (chainId: number): ChainConfig | undefined => {
-  return EVM_CHAINS.find(c => c.id === chainId);
+/* ======= */
+
+type RpcScore = { url: string; latency: number; success: boolean };
+const RPC_CACHE = new Map<number, { url: string; timestamp: number }>();
+const RPC_TIMEOUT = 2500;
+const CACHE_TTL = 1000 * 60 * 5; 
+
+const pingRpc = async (url: string): Promise<RpcScore> => {
+  const start = Date.now();
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), RPC_TIMEOUT);
+    const res = await fetch(url, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_blockNumber', params: [] })
+    });
+    clearTimeout(timeout);
+    if (!res.ok) throw new Error('Offline');
+    return { url, latency: Date.now() - start, success: true };
+  } catch {
+    return { url, latency: Infinity, success: false };
+  }
 };
 
-export const requireChain = (chainId: number): ChainConfig => {
-  const chain = getChainById(chainId);
-  if (!chain) throw new Error(`Unsupported chainId: ${chainId}`);
-  return chain;
+export const getBestRpc = async (chainId: number): Promise<string> => {
+  const cached = RPC_CACHE.get(chainId);
+  if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) return cached.url;
+
+  const chain = requireChain(chainId);
+  const results = await Promise.all(chain.rpcs.map(pingRpc));
+  const valid = results.filter(r => r.success).sort((a, b) => a.latency - b.latency);
+
+  if (!valid.length) throw new Error(`No working RPC for ${chain.name}`);
+  
+  const best = valid[0].url;
+  RPC_CACHE.set(chainId, { url: best, timestamp: Date.now() });
+  return best;
+};
+
+export const refreshRpc = async (chainId: number): Promise<string> => {
+  RPC_CACHE.delete(chainId);
+  return getBestRpc(chainId);
+};
+
+/* ====== */
+
+export const getChainById = (chainId: number) => EVM_CHAINS.find(c => c.id === chainId);
+export const requireChain = (chainId: number) => {
+  const c = getChainById(chainId);
+  if (!c) throw new Error(`Unsupported Chain ID: ${chainId}`);
+  return c;
 };
 
 export const validateChainConfig = () => {
   const ids = EVM_CHAINS.map(c => c.id);
-  if (new Set(ids).size !== ids.length) throw new Error("CRITICAL: Duplicate Chain IDs detected.");
-  for (const chain of EVM_CHAINS) {
-    if (!chain.explorer) throw new Error(`CRITICAL: Missing explorer for chain ${chain.name}`);
-    if (!chain.rpc) throw new Error(`CRITICAL: Missing RPC for chain ${chain.name}`);
+  const duplicates = ids.filter((item, index) => ids.indexOf(item) !== index);
+  if (duplicates.length > 0) {
+    throw new Error(`Duplicate Chain IDs: ${[...new Set(duplicates)].join(', ')}`);
   }
 };
 

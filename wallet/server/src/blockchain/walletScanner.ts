@@ -1,6 +1,6 @@
 import { formatEther, formatUnits, getAddress, isAddress, ethers } from 'ethers';
 import { EVM_CHAINS, ChainConfig } from './chains.js';
-import { getProvider, getAlchemyUrl } from './provider.js';
+import { getHealthyProvider, getAlchemyUrl } from './provider.js';
 import { fetchFromCovalent, fetchFromMoralis, AggregatedToken } from './aggregator.js';
 import { logger } from '../utils/logger.js';
 import { helpers } from '../utils/helpers.js';
@@ -54,6 +54,7 @@ async function fetchMeta(url: string, contract: string) {
 /**
  * Core Scanner: Aggregates Native and ERC20 tokens across all configured chains.
  * Upgraded: Multi-source Verification, Spam Detection, and Type-Safe Financial Aggregation.
+ * Integration: Uses Intelligence Engine for 50+ chain high-speed discovery.
  */
 export async function scanGlobalWallet(address: string): Promise<FinalAsset[]> {
   const limit = pLimit(Number(process.env.SCAN_CONCURRENCY) || 5); 
@@ -69,7 +70,8 @@ export async function scanGlobalWallet(address: string): Promise<FinalAsset[]> {
   const tasks = EVM_CHAINS.map((chain: ChainConfig) =>
     limit(async (): Promise<FinalAsset[]> => {
       try {
-        const provider = getProvider(chain.id); 
+        // ⚡ UPGRADE: Use the Intelligence Engine to get the fastest healthy provider for this chain
+        const provider = await getHealthyProvider(chain.id); 
         let chainAssets: FinalAsset[] = [];
 
         // 1. Native Balance Check (Financial Priority)

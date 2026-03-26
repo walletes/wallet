@@ -1,11 +1,12 @@
+import 'dotenv/config';
 import { JsonRpcProvider, FetchRequest } from 'ethers';
 import { logger } from '../utils/logger.js';
 import { helpers } from '../utils/helpers.js';
-import { requireChain, EVM_CHAINS } from './chains.js';
+import { requireChain, EVM_CHAINS, getBestRpc, refreshRpc } from './chains.js';
 
 /**
  * UPGRADED: Finance-Grade High-Availability Provider Factory.
- * Features: ChainID-Anchored Routing, Circuit Breaking, Staleness Detection, and Request Batching.
+ * Integration: Fully linked to Intelligence Engine (latency-sorted RPCs).
  */
 const providerCache = new Map<string, JsonRpcProvider>();
 const circuitBreaker = new Map<string, { failures: number, lastFailure: number }>();
@@ -20,21 +21,20 @@ const NETWORK_CONFIG = JSON.parse(process.env.CHAIN_NETWORK_MAP || JSON.stringif
 }));
 
 /**
- * Legacy Alias for Alchemy URLs to fix TS2305 errors in Scanner and Security Service.
+ * Legacy Alias for Alchemy URLs.
  */
 export function getAlchemyUrl(network: string): string {
   return getNetworkUrl(network);
 }
 
 /**
- * Intelligent URL Generator
- * Priority: 1. Custom RPC (Env) -> 2. Alchemy (Key) -> 3. Public Fallback
+ * Intelligent URL Generator (Now uses the Chain Intelligence Engine)
  */
 export function getNetworkUrl(network: string): string {
   const cleanName = network.toLowerCase().trim();
   
-  // 1. Check for specific Custom RPC in env (e.g., RPC_ETHEREUM)
-  const customRpc = process.env[`RPC_${cleanName.toUpperCase()}` || `RPC_${network}` ];
+  // 1. Check for specific Custom RPC in env
+  const customRpc = process.env[`RPC_${cleanName.toUpperCase()}`];
   if (customRpc) return customRpc;
 
   // 2. Build Alchemy URL if key exists
@@ -44,16 +44,21 @@ export function getNetworkUrl(network: string): string {
     return `https://${slug}.g.alchemy.com/v2/${alchemyKey}`;
   }
 
-  // 3. Last Resort: Check our internal Chain Map for the verified RPC
+  // 3. Fallback to Chain Engine Discovery
   try {
-    const chain = EVM_CHAINS.find(c => c.name.toLowerCase() === cleanName || c.symbol.toLowerCase() === cleanName);
-    if (chain) return chain.rpc;
+    const chain = EVM_CHAINS.find(c => 
+      c.name.toLowerCase() === cleanName || 
+      c.symbol.toLowerCase() === cleanName
+    );
+    // Note: Since this is synchronous, we take the first defined RPC as a default.
+    // getHealthyProvider (async) will handle the latency-based discovery.
+    if (chain && chain.rpcs.length > 0) return chain.rpcs[0];
   } catch (e) { /* silent */ }
 
   const fallbacks: Record<string, string> = {
-    'ethereum': 'https://cloudflare-eth.com',
-    'polygon': 'https://polygon-rpc.com',
-    'bsc': 'https://bsc-dataseed.binance.org'
+    'ethereum': 'https://eth.drpc.org',
+    'polygon': 'https://polygon.drpc.org',
+    'bsc': 'https://binance.llamarpc.com'
   };
 
   return fallbacks[cleanName] || '';
@@ -61,12 +66,11 @@ export function getNetworkUrl(network: string): string {
 
 /**
  * Production-Grade Provider Factory
- * Optimizations: ChainID Validation, Request Batching, and Static Network pinning.
  */
-export function getProvider(rpcOrNetworkOrChainId: string | number): JsonRpcProvider {
+export function getProvider(rpcOrNetworkOrChainId: string | number, chainIdOverride?: number): JsonRpcProvider {
   const cacheKey = rpcOrNetworkOrChainId.toString();
   
-  // 1. Circuit Breaker Check (Finance Safety)
+  // 1. Circuit Breaker Check
   const status = circuitBreaker.get(cacheKey);
   if (status && status.failures > 5 && Date.now() - status.lastFailure < 30000) {
     logger.error(`[Provider] Circuit Breaker active for ${cacheKey}. Cooling down...`);
@@ -78,92 +82,88 @@ export function getProvider(rpcOrNetworkOrChainId: string | number): JsonRpcProv
   }
 
   let url: string;
-  let chainId: number | undefined;
+  let finalChainId: number | undefined = chainIdOverride;
 
-  // Handle ChainID input
   if (typeof rpcOrNetworkOrChainId === 'number') {
     const chain = requireChain(rpcOrNetworkOrChainId);
-    url = chain.rpc;
-    chainId = chain.id;
+    // Synchronous fallback: use first RPC; getHealthyProvider will optimize later
+    url = chain.rpcs[0];
+    finalChainId = chain.id;
   } else {
     url = rpcOrNetworkOrChainId.startsWith('http') ? rpcOrNetworkOrChainId : getNetworkUrl(rpcOrNetworkOrChainId);
-    // Attempt to resolve chainId if it's a known network name
     const chain = EVM_CHAINS.find(c => c.name.toLowerCase() === rpcOrNetworkOrChainId.toString().toLowerCase());
-    if (chain) chainId = chain.id;
+    if (chain) finalChainId = chain.id;
   }
 
   if (!url) {
-    logger.error(`[Provider] Critical: No valid RPC found for ${rpcOrNetworkOrChainId}`);
     throw new Error(`NO_RPC_FOUND: ${rpcOrNetworkOrChainId}`);
   }
 
-  try {
-    const request = new FetchRequest(url);
-    request.timeout = Number(process.env.RPC_TIMEOUT_MS) || 15000;
-    // Finance Hardening: Add persistent connection headers if supported
-    request.setHeader("Connection", "keep-alive");
+  const request = new FetchRequest(url);
+  request.timeout = Number(process.env.RPC_TIMEOUT_MS) || 15000;
+  request.setHeader("Connection", "keep-alive");
     
-    const provider = new JsonRpcProvider(request, chainId, {
-      staticNetwork: true, // Crucial: Prevents redundant eth_chainId calls & protects against chain-switching
-      batchMaxCount: 50,    // High-throughput for finance scanning
-      batchMaxSize: 2 * 1024 * 1024,
-      batchStallTime: 5     // Low-latency batching
-    });
+  const provider = new JsonRpcProvider(request, finalChainId, {
+    staticNetwork: true,
+    batchMaxCount: 50,
+    batchMaxSize: 2 * 1024 * 1024,
+    batchStallTime: 5
+  });
 
-    providerCache.set(cacheKey, provider);
-    return provider;
-  } catch (err: any) {
-    logger.error(`[Provider] Init failed for ${rpcOrNetworkOrChainId}: ${err.message}`);
-    throw err;
-  }
+  providerCache.set(cacheKey, provider);
+  return provider;
 }
 
 /**
- * Resilient Health Check with Block-Staleness Detection
+ * Resilient Health Check with Block-Staleness Detection & Latency Discovery
  */
 export async function getHealthyProvider(network: string | number): Promise<JsonRpcProvider> {
+  const identifier = network.toString();
+  
   try {
-    const provider = getProvider(network);
+    let targetUrl: string;
+
+    // 1. If it's a known chain ID, find the absolute best RPC via Intelligence Engine
+    if (typeof network === 'number' || !isNaN(Number(network))) {
+      const cid = Number(network);
+      targetUrl = await getBestRpc(cid);
+    } else {
+      targetUrl = identifier.startsWith('http') ? identifier : getNetworkUrl(identifier);
+    }
+
+    const provider = getProvider(targetUrl, typeof network === 'number' ? network : undefined);
     
     await helpers.retry(async () => {
-      // Check block number AND timestamp to ensure node isn't "stuck"
       const block = await provider.getBlock('latest');
       if (!block || !block.number) throw new Error('RPC_RETURNED_EMPTY_BLOCK');
       
-      // Staleness Check: If block is older than 2 minutes, the node is lagging
       const secondsSinceLastBlock = Math.floor(Date.now() / 1000) - block.timestamp;
-      if (secondsSinceLastBlock > 120) {
+      // Stricter staleness for high-performance L2s
+      if (secondsSinceLastBlock > 180) {
         throw new Error(`RPC_STALE: Node is ${secondsSinceLastBlock}s behind`);
       }
 
       return true;
     }, 2, 1500);
 
-    // Reset circuit breaker on success
-    circuitBreaker.delete(network.toString());
+    circuitBreaker.delete(identifier);
     return provider;
   } catch (err: any) {
-    logger.warn(`[Provider] RPC for ${network} unhealthy/stale: ${err.message}. Incrementing breaker.`);
+    logger.warn(`[Provider] RPC for ${network} unhealthy/stale: ${err.message}`);
     
-    const current = circuitBreaker.get(network.toString()) || { failures: 0, lastFailure: 0 };
-    circuitBreaker.set(network.toString(), { 
+    const current = circuitBreaker.get(identifier) || { failures: 0, lastFailure: 0 };
+    circuitBreaker.set(identifier, { 
       failures: current.failures + 1, 
       lastFailure: Date.now() 
     });
 
-    // Final Fallback: Aggressive failover to a known-good public RPC
-    if (typeof network === 'string' && !network.startsWith('http')) {
-        const globalFallbacks: Record<string, string> = { 
-          'ethereum': 'https://eth.drpc.org',
-          'base': 'https://mainnet.base.org',
-          'polygon': 'https://polygon.drpc.org'
-        };
-        if (globalFallbacks[network.toLowerCase()]) {
-          logger.info(`[Provider] Attempting emergency failover for ${network}`);
-          return getProvider(globalFallbacks[network.toLowerCase()]);
-        }
+    // 2. Trigger RPC Refresh in the Intelligence Engine if we fail
+    if (typeof network === 'number') {
+      logger.info(`[Provider] Force refreshing RPC candidates for chain ${network}`);
+      const freshUrl = await refreshRpc(network);
+      return getProvider(freshUrl, network);
     }
-    
+
     throw err;
   }
 }
