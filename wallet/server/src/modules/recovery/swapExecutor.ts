@@ -78,55 +78,37 @@ export const swapExecutor = {
           
         if (!bestRpc) throw new Error(`NO_RPC_AVAILABLE_FOR_CHAIN_${chainId}`);
         
-        const provider = getProvider(bestRpc, chainId);
+     // 3. DATA SYNC (MULTI-RPC RACE - PRODUCTION HARDENED)
+     const rpcCandidates = [bestRpc, ...chain.rpcs.filter(r => r !== bestRpc)].slice(0, 3);
 
-        // 3. DATA SYNC (Zero-Hardcoding: Combined state fetch)
-   let nativeBalance, feeData;
+     let nativeBalance, feeData, provider;
 
-   try {
-   [nativeBalance, feeData] = await this.withTimeout(
-   Promise.all([
-   provider.getBalance(safeAddr),
-   provider.getFeeData()
-   ]),
-   6000,
-   `SYNC_${chain.name}`
-   );
-   } catch (err) {
-   logger.warn(`[SwapExecutor][${traceId}] Primary RPC failed for ${chain.name}, retrying fallback...`);
+     try {
+     const result = await Promise.any(
+     rpcCandidates.map(async (rpc) => {
+     const p = getProvider(rpc, chainId);
 
-   // fallback to another RPC
-   const fallbackRpc = chain.rpcs.find(r => r !== bestRpc) || bestRpc;
-   const rpcCandidates = [bestRpc, ...chain.rpcs.filter(r => r !== bestRpc)].slice(0, 3);
+     const [balance, fees] = await this.withTimeout(
+     Promise.all([
+     p.getBalance(safeAddr),
+     p.getFeeData()
+     ]),
+     5000,
+     `RPC_RACE_${chainId}`
+     );
 
-   let nativeBalance, feeData, provider;
+     return { balance, fees, provider: p };
+     })
+     );
 
-   try {
-   const result = await Promise.any(
-   rpcCandidates.map(async (rpc) => {
-   const p = getProvider(rpc, chainId);
+     nativeBalance = result.balance;
+     feeData = result.fees;
+     provider = result.provider;
 
-   const [balance, fees] = await this.withTimeout(
-   Promise.all([
-   p.getBalance(safeAddr),
-   p.getFeeData()
-   ]),
-   5000,
-   `RPC_RACE_${chainId}`
-    );
-
-    return { balance, fees, provider: p };
-    })
-    );
-
-    nativeBalance = result.balance;
-    feeData = result.fees;
-    provider = result.provider;
-
-    } catch (err) {
-    logger.error(`[SwapExecutor][${traceId}] ALL RPCs failed for chain ${chainId}`);
-    throw new Error(`ALL_RPC_FAILED_${chainId}`);
-    }
+     } catch (err) {
+     logger.error(`[SwapExecutor][${traceId}] ALL RPCs failed for chain ${chainId}`);
+     throw new Error(`ALL_RPC_FAILED_${chainId}`);
+     }
 
         const nativePriceUsd = Number(process.env[`PRICE_${chain.nativePriceId.toUpperCase()}`]) || 
                                Number(process.env.NATIVE_PRICE_FALLBACK) || 2500;
