@@ -242,8 +242,9 @@ export const txBuilder = {
      const normalizedValue = normalizeHex(tx.value);
      const normalizedGas = normalizeHex(tx.gasLimit || 280000n);
 
-if (!tx.to) throw new Error(`Missing 'to' address for transaction: ${tx.metadata?.type || 'UNKNOWN'}`);
-
+     if (!tx.to) {
+     throw new Error(`Missing 'to' address for transaction: ${tx.metadata?.type || 'UNKNOWN'}`);
+        }
       return {
         ...tx,
         to: getAddress(tx.to), 
