@@ -102,6 +102,9 @@ export function getProvider(rpcOrNetworkOrChainId: string | number, chainIdOverr
   const request = new FetchRequest(url);
   request.timeout = Number(process.env.RPC_TIMEOUT_MS) || 15000;
   request.setHeader("Connection", "keep-alive");
+    request.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+      request.setHeader("Accept", "application/json");
+        request.setHeader("Content-Type", "application/json");
     
   const provider = new JsonRpcProvider(request, finalChainId, {
     staticNetwork: true,
