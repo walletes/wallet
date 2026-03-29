@@ -33,7 +33,7 @@ export const validator = {
     if (!apiKey || apiKey.length < 20) {
       return res.status(401).json({ 
         success: false, 
-        error: 'UNAUTHORIZED: Valid 2026 API Key (x-api-key) required.',
+        error: 'UNAUTHORIZED: Valid API Key (x-api-key) required.',
         traceId
       });
     }
@@ -125,9 +125,9 @@ export const validator = {
     const rawAddress = (req.body.address || req.query.address || req.body.walletAddress || req.params.address) as string;
     
     if (!rawAddress || !isAddress(rawAddress)) {
-      return res.status(400).json({ 
+      return res.status(422).json({ 
         success: false, 
-        error: 'INVALID_INPUT: A valid EVM (0x...) wallet address is required.' 
+        error: 'A valid EVM (0x...) wallet address is required for security audit.' 
       });
     }
 
