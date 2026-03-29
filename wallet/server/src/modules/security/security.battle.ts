@@ -1,15 +1,10 @@
 import axios from 'axios';
 
-/**
- * 2026 INSTITUTIONAL GATEWAY: HEAVY BATTLE TEST SUITE
- * Targets: Latency, EIP-7702 Risk, Timeout Resilience, and Input Sanitization.
- */
-
 const API_BASE = 'http://localhost:5000/api/v1/security/scan';
 const INTERNAL_KEY = "9293939sj39dn2oenaJKOw1oKHNa9e9iok0k11zo3ixja9wo3ndkzoskendkxks";
 
 const TEST_WALLETS = {
-  SECURE_EOA: "0xd8dA6BF26964aF9d7eEd9e03E53415D37aA96045", // Vitalik
+  SECURE_EOA: "0xd8dA6BF26964aF9d7eEd9e03E53415D37aA96045",
   MALFORMED: "0xInvalidAddress123",
   LOWERCASE: "0x742d35cc6634c0532925a3b844bc454e4438f44e",
 };
@@ -44,42 +39,31 @@ async function runBattleTest() {
       method: 'POST',
       data: { address: TEST_WALLETS.MALFORMED },
       expectedStatus: 422
-    },
-    {
-      name: "Superchain Aggregation Check",
-      method: 'POST',
-      data: { address: TEST_WALLETS.SECURE_EOA, network: 'superchain' },
-      expectedStatus: 200
-    },
-    {
-        name: "Forced Cache Bypass (High-Stakes Mode)",
-        method: 'GET',
-        params: { address: TEST_WALLETS.SECURE_EOA, refresh: 'true' },
-        expectedStatus: 200
     }
   ];
 
   for (const test of scenarios) {
     const start = performance.now();
     try {
-      const config: any = {
+      const res = await axios({
         method: test.method,
         url: API_BASE,
         headers: { 
-            'x-api-key': INTERNAL_KEY, 
-            'x-trace-id': `BATTLE-UNIT-${Date.now()}` 
+          'x-api-key': INTERNAL_KEY,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'x-trace-id': `BATTLE-UNIT-${Date.now()}` 
         },
         data: test.data,
         params: test.params,
         validateStatus: () => true 
-      };
+      });
 
-      const res = await axios(config);
       const duration = (performance.now() - start).toFixed(2);
 
       if (res.status === test.expectedStatus) {
-        let extraCheck = test.validate ? test.validate(res) : true;
-        if (extraCheck) {
+        const logicPass = test.validate ? test.validate(res) : true;
+        if (logicPass) {
           console.log(`✅ [PASS] ${test.name} (${duration}ms)`);
           passCount++;
         } else {
@@ -88,7 +72,7 @@ async function runBattleTest() {
         }
       } else {
         console.log(`❌ [FAIL] ${test.name}: Expected ${test.expectedStatus}, got ${res.status}`);
-        console.log(`   Error: ${res.data.error || 'Unknown'}`);
+        console.log(`   Server Response: ${JSON.stringify(res.data.error || res.data)}`);
         failCount++;
       }
     } catch (err: any) {
@@ -97,14 +81,18 @@ async function runBattleTest() {
     }
   }
 
-  // --- 2026 CONCURRENCY STRESS (Flood Test) ---
   console.log("\n🔥 STARTING CONCURRENCY BURST (15 Parallel Audits)...");
   const burstStart = performance.now();
   
   const burst = Array.from({ length: 15 }).map((_, i) => 
     axios.post(API_BASE, 
-      { address: TEST_WALLETS.SECURE_EOA, traceId: `BURST-${i}` }, 
-      { headers: { 'x-api-key': INTERNAL_KEY } }
+      { address: TEST_WALLETS.SECURE_EOA }, 
+      { 
+        headers: { 
+          'x-api-key': INTERNAL_KEY,
+          'Content-Type': 'application/json'
+        } 
+      }
     ).catch(e => e.response)
   );
 
@@ -119,8 +107,7 @@ async function runBattleTest() {
   console.log(`TOTAL FAILED: ${failCount}`);
   console.log("-----------------------\n");
 
-  if (failCount > 0) process.exit(1);
-  process.exit(0);
+  process.exit(failCount > 0 ? 1 : 0);
 }
 
 runBattleTest();

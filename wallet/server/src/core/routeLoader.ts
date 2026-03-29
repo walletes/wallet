@@ -70,7 +70,7 @@ export async function loadRoutes(app: Express) {
         app.use(apiPath, router);
       } else {
         // Enforce Authentication and Rate Limiting for high-value endpoints
-        app.use(apiPath, validator.apiKeyAuth, router);
+     app.use(apiPath, validator.apiKeyAuth, validator.validateRequestBody, router);
       }
 
       logger.info(`[RouteLoader] Mounted: ${apiPath} [${isPublic ? 'PUBLIC' : 'PROTECTED'}]`);

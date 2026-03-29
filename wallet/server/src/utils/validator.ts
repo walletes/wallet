@@ -122,7 +122,7 @@ export const validator = {
    */
   validateRequestBody(req: Request, res: Response, next: NextFunction) {
     // 1. Extract Address from standard 2026 field names
-    const rawAddress = (req.body.address || req.query.address || req.body.walletAddress || req.params.address) as string;
+  const rawAddress = (req.body?.address || req.query?.address || req.body?.walletAddress || req.params?.address) as string;
     
     if (!rawAddress || !isAddress(rawAddress)) {
       return res.status(422).json({ 
@@ -135,7 +135,7 @@ export const validator = {
       // 2. NORMALIZATION: Convert to EIP-55 Checksummed format
       // Essential for cross-referencing with indexing services like Alchemy/Base.
       const checksummed = getAddress(rawAddress);
-      
+      req.body = req.body || {};  
       // Inject back into the request pipeline to ensure all services use the same format
       if (req.body) req.body.address = checksummed;
       if (req.body.walletAddress) req.body.walletAddress = checksummed;
