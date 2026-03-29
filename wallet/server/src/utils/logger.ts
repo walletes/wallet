@@ -18,6 +18,13 @@ const REDACT_KEYS = [
 ];
 
 /**
+ * GLOBAL SERIALIZER SAFETY NET
+ * Handles any BigInts that escape the recursive redaction.
+ */
+const bigIntReplacer = (_key: string, value: any) => 
+  typeof value === 'bigint' ? value.toString() : value;
+
+/**
  * Deep-scans objects and redacts sensitive financial data.
  * v2.1: Implements memory-wiping for intercepted sensitive buffers.
  */
@@ -91,11 +98,10 @@ const formatMessage = (level: string, message: string, meta: any[]) => {
       context: processedMeta.length > 0 ? processedMeta : undefined,
       version: APP_VERSION,
       environment: process.env.NODE_ENV
-    });
+    }, bigIntReplacer);
   }
 
   // Human-readable for Local Development
-  // Fixed: greenBright used to resolve ts(2339)
   const colors: Record<string, any> = {
     INFO: chalk.cyan,
     WARN: chalk.yellow,
@@ -106,7 +112,7 @@ const formatMessage = (level: string, message: string, meta: any[]) => {
   };
 
   const color = colors[level] || chalk.white;
-  const metaStr = processedMeta.length > 0 ? ` | ${JSON.stringify(processedMeta, null, 2)}` : '';
+  const metaStr = processedMeta.length > 0 ? ` | ${JSON.stringify(processedMeta, bigIntReplacer, 2)}` : '';
   
   return `${color(`[${level}]`)} [${timestamp}] [${traceId}] ${message}${metaStr}`;
 };
