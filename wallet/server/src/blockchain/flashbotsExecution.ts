@@ -81,21 +81,21 @@ export const flashbotsExecution = {
       // Primary provider for simulation logic
       const flashbotsProvider = flashbotsProviders[0];
 
-      // 3. ELITE FEE & NONCE STRATEGY (Collision Resistance)
+      // ELITE FEE & NONCE STRATEGY (Collision Resistance)
       const [pendingNonce, feeData, blockNumber] = await Promise.all([
-        provider.getTransactionCount(userWallet.address, 'pending'), // Use 'pending' to avoid collision
+        provider.getTransactionCount(userWallet.address, 'pending'),
         provider.getFeeData(),
         provider.getBlockNumber()
       ]);
 
-      // Institutional Escalation: 4.0 Gwei to ensure inclusion over basic bots
-      const priorityEscalation = ethersLegacy.parseUnits(process.env.PRIORITY_BUMP || '4.0', 'gwei');
+      // Institutional Escalation: 5 Gwei to ensure inclusion over basic bots
+      const priorityEscalation = ethersLegacy.parseUnits(process.env.PRIORITY_BUMP || '5.0', 'gwei');
       const priorityFee = (feeData.maxPriorityFeePerGas ?? ethersLegacy.parseUnits('1.5', 'gwei')) + priorityEscalation;
       
       // Post-Pectra Hardening: Max fee headroom at 3.0x base for volatility
       const maxFee = (feeData.maxFeePerGas ?? ethersLegacy.parseUnits('25', 'gwei')) * 30n / 10n + priorityFee;
 
-      // 4. ATOMIC BUNDLE CONSTRUCTION (UPGRADED: Hex Serialization)
+      //  ATOMIC BUNDLE CONSTRUCTION (UPGRADED: Hex Serialization)
       const bundleTransactions = payloads.map((tx, i) => {
         const isEIP1559 = chainConfig.supportsEIP1559 !== false;
         
