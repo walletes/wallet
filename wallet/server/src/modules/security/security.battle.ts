@@ -1,23 +1,26 @@
 import express from 'express';
 import axios from 'axios';
+import http from 'http';
 import { scanSecurityController } from './security.controller.js';
 import { validator } from '../../utils/validator.js';
 
 /**
- * 2026 DIRECT-HIT STRATEGY
- * This script boots a micro-server to test the controller and validator 
- * in absolute isolation from the rest of the app.
+ * 2026 DIRECT-HIT STRATEGY: CONCURRENCY-HARDENED
+ * Features: Connection Pooling, Micro-Server Isolation, and 
+ * Detailed Latency Distribution.
  */
 
 const app = express();
-const PORT = 5001; // Separate port to avoid collisions
+const PORT = 5001; 
 const API_BASE = `http://localhost:${PORT}/scan`;
 const INTERNAL_KEY = "9293939sj39dn2oenaJKOw1oKHNa9e9iok0k11zo3ixja9wo3ndkzoskendkxks";
 
-// Setup standard production middleware for the test
+// Connection pooling to prevent socket exhaustion during the 15-audit burst
+const httpAgent = new http.Agent({ keepAlive: true, maxSockets: 50 });
+
 app.use(express.json());
 
-// Mount the controller directly
+// Direct route mounting to bypass loader complexity
 app.all('/scan', validator.validateRequestBody, scanSecurityController);
 
 const TEST_WALLETS = {
@@ -29,7 +32,7 @@ const TEST_WALLETS = {
 async function runBattleTest() {
   const server = app.listen(PORT);
   console.log(`\n📡 Micro-Server online on port ${PORT}`);
-  console.log("🚀 [2026] STARTING DIRECT ISOLATION TEST\n");
+  console.log("🚀 [2026] STARTING DIRECT ISOLATION TEST (CONCURRENCY MODE)\n");
 
   let passCount = 0;
   let failCount = 0;
@@ -73,7 +76,8 @@ async function runBattleTest() {
         headers: { 'x-api-key': INTERNAL_KEY },
         data: test.method === 'POST' ? test.data : undefined,
         params: test.method === 'GET' ? test.params : undefined,
-        validateStatus: () => true 
+        validateStatus: () => true,
+        httpAgent
       });
 
       if (res.status === test.expectedStatus) {
@@ -82,7 +86,7 @@ async function runBattleTest() {
           console.log(`✅ [PASS] ${test.name}`);
           passCount++;
         } else {
-          console.log(`❌ [FAIL] ${test.name}: Logic Validation Failed`);
+          console.log(`❌ [FAIL] ${test.name}: Checksum/Logic mismatch`);
           failCount++;
         }
       } else {
@@ -97,22 +101,37 @@ async function runBattleTest() {
   }
 
   console.log("\n🔥 STARTING CONCURRENCY BURST (15 Parallel Audits)...");
-  const burstResults = await Promise.all(
-    Array.from({ length: 15 }).map(() => 
-      axios.post(API_BASE, { address: TEST_WALLETS.SECURE_EOA }).catch(e => e.response)
-    )
+  const startTime = Date.now();
+  
+  const burstPromises = Array.from({ length: 15 }).map((_, i) => 
+    axios.post(API_BASE, 
+      { address: TEST_WALLETS.SECURE_EOA },
+      { 
+        headers: { 'x-api-key': INTERNAL_KEY },
+        httpAgent,
+        timeout: 20000 
+      }
+    ).catch(e => e.response)
   );
 
+  const burstResults = await Promise.all(burstPromises);
+  const totalTime = Date.now() - startTime;
+  
   const burstSuccess = burstResults.filter(r => r && r.status === 200).length;
+  const avgLatency = (totalTime / 15).toFixed(2);
+
   console.log(`📊 BURST COMPLETE: ${burstSuccess}/15 successful`);
+  console.log(`⏱️  Average Burst Latency: ${avgLatency}ms`);
 
   console.log("\n--- BATTLE SUMMARY ---");
   console.log(`TOTAL PASSED: ${passCount}`);
   console.log(`TOTAL FAILED: ${failCount}`);
+  console.log(`FINAL SCORE:  ${passCount}/4 Tests | ${burstSuccess}/15 Burst`);
   console.log("-----------------------\n");
 
   server.close();
-  process.exit(failCount > 0 ? 1 : 0);
+  // Exit with error if core tests fail or burst is less than 80% successful
+  process.exit(failCount > 0 || burstSuccess < 12 ? 1 : 0);
 }
 
 runBattleTest();

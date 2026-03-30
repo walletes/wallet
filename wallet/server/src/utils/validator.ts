@@ -126,31 +126,31 @@ export const validator = {
 
     if (req.method === 'POST' && !req.body && (req as any).readable) {
         await new Promise((resolve) => setTimeout(resolve, 1));
-             }
-    
-    // 1. Extract Address from standard 2026 field names
- let rawAddress = (
-    req.body?.address || 
-    req.query?.address || 
-    req.params?.address ||
-    req.headers['x-address'] ||
-    req.headers['address'] 
-         ) as string;
- 
-  // UPGRADE: Improved Query String Fallback for high-concurrency GET requests
-  if (!rawAddress && req.url && req.url.includes('address=')) {
-    const urlParts = req.url.split('address=');
-    if (urlParts[1]) rawAddress = urlParts[1].split('&')[0];
-  }
-
-  if (!rawAddress && req.originalUrl && req.originalUrl.includes('?')) {
-    const queryString = req.originalUrl.split('?')[1];
-    const urlParams = new URLSearchParams(queryString);
-    rawAddress = urlParams.get('address') as string;
     }
     
-    // UPGRADE: Strict EVM message and fallback to (req as any) for nested router safety
-    rawAddress = rawAddress || (req as any).address;
+    // 1. Extract Address from standard 2026 field names
+    let rawAddress = (
+      req.body?.address || 
+      req.query?.address || 
+      req.params?.address ||
+      req.headers['x-address'] ||
+      req.headers['address'] 
+    ) as string;
+ 
+    // UPGRADE: Force search in raw URL string if Axios/Express hasn't parsed the query object yet
+    if (!rawAddress && req.url) {
+      const urlMatch = req.url.match(/[?&]address=([^&]+)/);
+      if (urlMatch) rawAddress = urlMatch[1];
+    }
+
+    if (!rawAddress && req.originalUrl && req.originalUrl.includes('?')) {
+      const queryString = req.originalUrl.split('?')[1];
+      const urlParams = new URLSearchParams(queryString);
+      rawAddress = urlParams.get('address') as string;
+    }
+    
+    // UPGRADE: Check pinned data from nested routers or previous middleware passes
+    rawAddress = rawAddress || (req as any).address || (req as any).validatedAddress;
 
     if (!rawAddress || !isAddress(rawAddress)) {
       return res.status(422).json({ 
@@ -163,18 +163,22 @@ export const validator = {
     try {
       // 2. NORMALIZATION: Convert to EIP-55 Checksummed format
       const checksummed = getAddress(rawAddress);
+      
+      // Ensure objects exist before assignment
       req.body = req.body || {};  
       req.query = req.query || {};
       
+      // UPGRADE: Triple-Pinning to ensure data survives the hand-off to Controllers
       req.body.address = checksummed;
       req.query.address = checksummed;
       (req as any).address = checksummed;
+      (req as any).validatedAddress = checksummed; 
       
       res.setHeader('X-Trace-Id', traceId);
       next();
     } catch (e) {
       logger.warn(`[Validator] Malformed checksum attempt: ${rawAddress}`);
-      return res.status(400).json({ success: false, error: 'MALFORMED_ADDRESS_CHECKSUM',traceId });
+      return res.status(400).json({ success: false, error: 'MALFORMED_ADDRESS_CHECKSUM', traceId });
     }
   }
 };

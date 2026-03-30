@@ -37,14 +37,20 @@ export const securityService = {
     
     try {
       // 1. 2026 INTEGRITY CHECK: Detect if EOA code is delegated (EIP-7702)
-      const integrity = await this.getAccountIntegrity(walletAddress, network);
+      // UPGRADE: Added a 4s deadline to prevent integrity checks from hanging the whole scan
+      const integrityPromise = this.getAccountIntegrity(walletAddress, network);
+      const timeoutPromise = new Promise((_, r) => setTimeout(() => r(new Error('TIMEOUT')), 4000));
+      const integrity = await Promise.race([integrityPromise, timeoutPromise]).catch(() => ({ isDelegated: false, isCompromised: false })) as any;
       
       // 2. Fetch Allowances with Alchemy Multi-Chain Provider (ERC20 + NFT Support)
-      // Note: In 2026, we batch these to save RPC credits
       const data = await helpers.retry(async () => {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), 8000); // 8s Alchemy Deadline
+
         const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
           body: JSON.stringify([
             {
               jsonrpc: "2.0", id: 1,
@@ -53,11 +59,12 @@ export const securityService = {
             },
             {
               jsonrpc: "2.0", id: 2,
-              method: "alchemy_getNftAllowances", // 2026 Spec for NFT Security
+              method: "alchemy_getNftAllowances", 
               params: [{ owner: getAddress(walletAddress) }]
             }
           ])
         });
+        clearTimeout(id);
         return await res.json();
       }, 2);
 
@@ -74,7 +81,7 @@ export const securityService = {
       // 3. Parallel Risk Assessment with Priority Queue
       const allowances: Allowance[] = await Promise.all(
         rawAllowances.map(async (allowance: any) => {
-          const rawAmount = allowance.allowance || "1"; // NFTs default to 1
+          const rawAmount = allowance.allowance || "1"; 
           const isInfinite = allowance.type === 'ERC20' && (rawAmount.includes('f') || rawAmount.startsWith('0xffffff') || rawAmount.length > 60); 
           const spenderAddr = getAddress(allowance.spender);
           const tokenAddr = getAddress(allowance.tokenAddress || allowance.contractAddress);
@@ -83,7 +90,6 @@ export const securityService = {
           
           let riskLevel: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' = 'LOW';
           
-          // CRITICAL: Account hijacked (7702) OR Spender is a known drainer
           if (integrity.isCompromised || securityProfile.isMalicious) {
             riskLevel = 'CRITICAL';
           } else if (isInfinite || (allowance.type === 'NFT' && allowance.approvedAll)) {
@@ -98,7 +104,7 @@ export const securityService = {
             amount: isInfinite ? 'Infinite' : rawAmount,
             isInfinite,
             riskLevel,
-            assetType: allowance.type,
+            assetType: allowance.type as any,
             spenderName: securityProfile.name || 'Unknown Contract',
             isMalicious: securityProfile.isMalicious,
             maliciousReason: integrity.isCompromised ? 'Account Integrity Compromised (EIP-7702)' : securityProfile.reason
@@ -120,25 +126,26 @@ export const securityService = {
   /**
    * EIP-7702 INTEGRITY AUDIT (March 2026 Spec)
    * Detects if an EOA has been "hijacked" by a SetCode transaction.
-   * UPGRADE: Added verification of the delegate's proxy implementation.
    */
   async getAccountIntegrity(address: string, network: string) {
     try {
       const provider = getProvider(network);
-      const code = await provider.getCode(address);
+      // UPGRADE: Use a low-level call with a strict timeout for the provider
+      const code = await Promise.race([
+        provider.getCode(address),
+        new Promise<string>((_, r) => setTimeout(() => r(new Error('CODE_TIMEOUT')), 3000))
+      ]);
       
-      // EIP-7702 code format: 0xef0100 + <delegate_address>
       if (code.startsWith('0xef0100')) {
         const delegateAddress = getAddress('0x' + code.slice(6).substring(0, 40));
         const profile = await this.assessSpenderRisk(delegateAddress, network);
         
-        // Deep verification: Is the delegate itself a proxy to a drainer?
-        const storageCheck = await provider.getStorage(delegateAddress, '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc');
+        const storageCheck = await provider.getStorage(delegateAddress, '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc').catch(() => '0x0');
         
         return {
           isDelegated: true,
           implementation: delegateAddress,
-          isCompromised: profile.isMalicious || storageCheck !== '0x0000000000000000000000000000000000000000000000000000000000000000',
+          isCompromised: profile.isMalicious || (storageCheck !== '0x0000000000000000000000000000000000000000000000000000000000000000' && storageCheck !== '0x'),
           isVerified: !profile.isMalicious && profile.name !== 'Unknown Contract',
           delegationType: 'SetCode'
         };
@@ -161,19 +168,17 @@ export const securityService = {
 
     try {
       const provider = getProvider(network);
-      const code = await provider.getCode(spender);
+      const code = await provider.getCode(spender).catch(() => '0x');
       
       if (code === '0x' || code === '0x00') return { name: 'External Wallet', isMalicious: false };
 
-      // 2026 PROXY HEURISTIC: Detects modern "Invisible" drainers (PUSH0, TSTORE optimized)
-      const isSuspicious = code.includes('5af158') || (code.length < 300 && code.includes('5f')); // 5f = PUSH0 (EIP-3855)
+      const isSuspicious = code.includes('5af158') || (code.length < 300 && code.includes('5f')); 
 
-      // CALL GOPLUS V3 API (With timeout fallback)
       const chainIdMap: any = { ethereum: "1", base: "8453", polygon: "137", optimism: "10" };
       const chainId = chainIdMap[network.toLowerCase()] || '1';
       
       const controller = new AbortController();
-      const id = setTimeout(() => controller.abort(), 3000);
+      const id = setTimeout(() => controller.abort(), 3500); // Strict GoPlus Timeout
 
       const res = await fetch(`https://api.gopluslabs.io/api/v1/address_security/${spender}?chain_id=${chainId}`, { signal: controller.signal });
       clearTimeout(id);
@@ -191,13 +196,13 @@ export const securityService = {
       return profile;
 
     } catch (err: any) {
+      // UPGRADE: On GoPlus timeout, return a neutral but cautious response instead of failing
       return { name: 'Unknown Contract', isMalicious: false, reason: 'Risk provider timeout' };
     }
   },
 
   /**
    * SHADOW-TRANSFER SIMULATION
-   * 2026 Logic: Includes EIP-7706 Multidimensional Gas & Internal Trace Analysis.
    */
   async simulateAction(walletAddress: string, tx: { to: string; data: string; value?: string }, network: string = 'ethereum') {
     const url = getAlchemyUrl(network);
@@ -221,9 +226,7 @@ export const securityService = {
 
       const { result } = await res.json();
       
-      // SHADOW CHECK: Drainers use multi-call to hide transfers.
-      // We flag ANY asset reduction where the 'from' is our wallet, excluding gas.
-      const highRiskChanges = result.changes.filter((c: any) => 
+      const highRiskChanges = (result?.changes || []).filter((c: any) => 
         c.from.toLowerCase() === walletAddress.toLowerCase() &&
         c.assetType !== 'NATIVE'
       );
@@ -232,14 +235,13 @@ export const securityService = {
         status: 'SUCCESS',
         safe: highRiskChanges.length === 0,
         riskScore: highRiskChanges.length > 0 ? 100 : 0,
-        // EIP-7706 support: Multidimensional gas fields
         gasReport: {
-          execution: result.gasUsed,
-          blob: result.blobGasUsed || '0', 
-          calldata: result.calldataGasUsed || '0'
+          execution: result?.gasUsed || '0',
+          blob: result?.blobGasUsed || '0', 
+          calldata: result?.calldataGasUsed || '0'
         },
         riskNote: highRiskChanges.length > 0 ? `CRITICAL: Action triggers ${highRiskChanges.length} unauthorized token transfers.` : undefined,
-        simulatedChanges: result.changes
+        simulatedChanges: result?.changes || []
       };
     } catch (err: any) {
       return { status: 'FAILED', safe: false, error: err.message };
