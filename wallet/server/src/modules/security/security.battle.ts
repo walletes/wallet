@@ -1,6 +1,11 @@
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:5000/api/v1/security/scan';
+/**
+ * 2026 BATTLE TEST: SECURITY MODULE
+ * Specifically hardened for Middleware Order & Concurrency Resiliency.
+ */
+
+const API_ROOT = 'http://localhost:5000/api/v1/security';
 const INTERNAL_KEY = "9293939sj39dn2oenaJKOw1oKHNa9e9iok0k11zo3ixja9wo3ndkzoskendkxks";
 
 const TEST_WALLETS = {
@@ -18,29 +23,33 @@ async function runBattleTest() {
     {
       name: "Standard POST Audit (Secure EOA)",
       method: 'POST',
+      url: `${API_ROOT}/scan`,
       data: { address: TEST_WALLETS.SECURE_EOA, network: 'base' },
       expectedStatus: 200
     },
     {
       name: "Legacy GET Audit (URL Params)",
       method: 'GET',
+      url: `${API_ROOT}/scan`,
       params: { address: TEST_WALLETS.SECURE_EOA, network: 'optimism' },
       expectedStatus: 200
     },
     {
       name: "Input Sanitization (Lowercase Auto-Checksum)",
       method: 'POST',
+      url: `${API_ROOT}/scan`,
       data: { address: TEST_WALLETS.LOWERCASE },
       expectedStatus: 200,
-      // Fixed: Case-insensitive comparison to satisfy EIP-55 check variants
       validate: (res: any) => {
         const wallet = res.data.data?.wallet || res.data.data?.address;
-        return wallet?.toLowerCase() === TEST_WALLETS.LOWERCASE.toLowerCase();
+        // Verify it was correctly checksummed by the validator
+        return wallet === "0x742d35Cc6634C0532925a3b844Bc454e4438f44e";
       }
     },
     {
       name: "Validation Failure (Invalid Address)",
       method: 'POST',
+      url: `${API_ROOT}/scan`,
       data: { address: TEST_WALLETS.MALFORMED },
       expectedStatus: 422
     }
@@ -51,14 +60,14 @@ async function runBattleTest() {
     try {
       const res = await axios({
         method: test.method,
-        url: API_BASE,
+        url: test.url,
         headers: { 
           'x-api-key': INTERNAL_KEY,
-          'Content-Type': 'application/json',
-          'x-trace-id': `BATTLE-UNIT-${Date.now()}` 
+          'Content-Type': 'application/json'
         },
-        data: test.data,
-        params: test.params,
+        // IMPORTANT: Axios only sends 'data' on POST/PUT, 'params' on GET
+        data: test.method === 'POST' ? test.data : undefined,
+        params: test.method === 'GET' ? test.params : undefined,
         validateStatus: () => true 
       });
 
@@ -71,7 +80,6 @@ async function runBattleTest() {
           passCount++;
         } else {
           console.log(`❌ [FAIL] ${test.name}: Logic Validation Failed (Checksum mismatch)`);
-          console.log(`   Got: ${res.data.data?.wallet || JSON.stringify(res.data)}`);
           failCount++;
         }
       } else {
@@ -86,24 +94,26 @@ async function runBattleTest() {
   }
 
   console.log("\n🔥 STARTING CONCURRENCY BURST (15 Parallel Audits)...");
-  const burstResults = await Promise.all(
-    Array.from({ length: 15 }).map((_, i) => 
-      axios.post(API_BASE, 
-        { address: TEST_WALLETS.SECURE_EOA }, 
-        { headers: { 'x-api-key': INTERNAL_KEY, 'Content-Type': 'application/json' } }
-      ).catch(e => e.response)
-    )
+  
+  const burstPromises = Array.from({ length: 15 }).map(() => 
+    axios.post(`${API_ROOT}/scan`, 
+      { address: TEST_WALLETS.SECURE_EOA }, 
+      { headers: { 'x-api-key': INTERNAL_KEY, 'Content-Type': 'application/json' } }
+    ).catch(e => e.response)
   );
 
+  const burstResults = await Promise.all(burstPromises);
   const burstSuccess = burstResults.filter(r => r && r.status === 200).length;
+  
   console.log(`📊 BURST COMPLETE: ${burstSuccess}/15 successful`);
 
   console.log("\n--- BATTLE SUMMARY ---");
   console.log(`TOTAL PASSED: ${passCount}`);
   console.log(`TOTAL FAILED: ${failCount}`);
+  console.log(`BURST SCORE:  ${burstSuccess}/15`);
   console.log("-----------------------\n");
 
-  process.exit(failCount > 0 ? 1 : 0);
+  process.exit(failCount > 0 || burstSuccess < 15 ? 1 : 0);
 }
 
 runBattleTest();

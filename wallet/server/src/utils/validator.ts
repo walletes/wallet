@@ -160,10 +160,9 @@ export const validator = {
       
       req.body.address = checksummed;
       req.query.address = checksummed;
-      req.body.walletAddress = checksummed;
+      (req as any).address = checksummed;
       
       res.setHeader('X-Trace-Id', traceId);
-
       next();
     } catch (e) {
       logger.warn(`[Validator] Malformed checksum attempt: ${rawAddress}`);
