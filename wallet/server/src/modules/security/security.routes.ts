@@ -8,13 +8,13 @@ const router = express.Router();
  * @route   GET /api/v1/security/scan
   * @desc    Scans for risky contract approvals (URL-based lookup)
    */
-  router.get('/scan', scanSecurityController);
+router.get('/scan', validator.validateRequestBody, scanSecurityController);
 
    /**
    * @route   POST /api/v1/security/scan
    * @desc    Institutional Security Audit (JSON-body based)
    */
-  router.post('/scan', scanSecurityController);
+ router.post('/scan', validator.validateRequestBody, scanSecurityController);
   
       export const routeConfig = {
       path: '/v1/security',

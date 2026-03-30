@@ -129,14 +129,14 @@ export const validator = {
              }
     
     // 1. Extract Address from standard 2026 field names
-  let rawAddress = (
+ let rawAddress = (
     req.body?.address || 
     req.query?.address || 
-    req.headers['x-address'] || 
-     (req as any).address ||
-    req.params?.address
-    ) as string;
-   
+    req.params?.address ||
+    req.headers['x-address'] ||
+    req.headers['address'] 
+         ) as string;
+ 
   if (!rawAddress && req.originalUrl && req.originalUrl.includes('?')) {
     const queryString = req.originalUrl.split('?')[1];
     const urlParams = new URLSearchParams(queryString);
