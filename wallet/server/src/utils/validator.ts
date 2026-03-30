@@ -137,10 +137,11 @@ export const validator = {
     req.params?.address
     ) as string;
    
-   if (!rawAddress && req.originalUrl.includes('address=')) {
-      const urlParams = new URLSearchParams(req.originalUrl.split('?')[1]);
-        rawAddress = urlParams.get('address') as string;
-        }
+  if (!rawAddress && req.originalUrl && req.originalUrl.includes('?')) {
+    const queryString = req.originalUrl.split('?')[1];
+    const urlParams = new URLSearchParams(queryString);
+    rawAddress = urlParams.get('address') as string;
+    }
     
     if (!rawAddress || !isAddress(rawAddress)) {
       return res.status(422).json({ 

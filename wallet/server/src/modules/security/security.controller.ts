@@ -12,25 +12,20 @@ export async function scanSecurityController(req: Request, res: Response) {
   const startTime = performance.now();
   
   // 1. Normalize input: Support both high-level Superchain scans and specific L2s
-  const rawAddress = (req.body.address || req.query.address) as string;
-  const network = ((req.query.network || req.body.network || 'superchain') as string).toLowerCase();
-  const refresh = req.query.refresh === 'true'; // Force bypass cache for high-stakes audits
+ const rawAddress = (req.body.address || req.query.address || (req as any).address) as string;
+ const network = ((req.query.network || req.body.network || 'superchain') as string).toLowerCase();
+ const refresh = req.query.refresh === 'true'; 
   
   // Create a persistent Trace ID for cross-service debugging
-  const traceId = req.headers['x-trace-id'] || `SEC-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+ const traceId = req.headers['x-trace-id'] || `SEC-${Date.now()}`;
 
   try {
     // 2. Strict Validation & Checksumming (Standard 2026 Security)
-    if (!rawAddress || !isAddress(rawAddress)) {
-      logger.warn(`[SecurityController][${traceId}] Blocked invalid scan attempt: ${rawAddress}`);
-      return res.status(422).json({ 
-        success: false, 
-        error: 'A valid EVM (0x...) wallet address is required for security audit.',
-        traceId
-      });
-    }
+    if (!rawAddress) {
+    throw new Error('MISSING_ADDRESS_AFTER_VALIDATION');
+                     }
 
-    const checksummedAddress = getAddress(rawAddress);
+    const checksummedAddress = rawAddress;
     
     // 3. Parallel Intelligence Gathering (EIP-7702 & Allowances)
     logger.info(`[SecurityController][${traceId}] Full Audit: ${checksummedAddress} | Network: ${network} | Mode: ${refresh ? 'FORCED_REFRESH' : 'CACHED'}`);
