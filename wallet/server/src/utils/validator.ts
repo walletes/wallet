@@ -137,10 +137,10 @@ export const validator = {
     req.params?.address
     ) as string;
    
-    if (!rawAddress && req.url.includes('address=')) {
-    const urlParams = new URLSearchParams(req.url.split('?')[1]);
-    rawAddress = urlParams.get('address') as string;
-                                                     }
+   if (!rawAddress && req.originalUrl.includes('address=')) {
+      const urlParams = new URLSearchParams(req.originalUrl.split('?')[1]);
+        rawAddress = urlParams.get('address') as string;
+        }
     
     if (!rawAddress || !isAddress(rawAddress)) {
       return res.status(422).json({ 
@@ -166,7 +166,7 @@ export const validator = {
       next();
     } catch (e) {
       logger.warn(`[Validator] Malformed checksum attempt: ${rawAddress}`);
-      return res.status(400).json({ success: false, error: 'MALFORMED_ADDRESS_CHECKSUM' });
+      return res.status(400).json({ success: false, error: 'MALFORMED_ADDRESS_CHECKSUM',traceId });
     }
   }
 };
