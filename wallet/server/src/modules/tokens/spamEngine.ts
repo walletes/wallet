@@ -1,6 +1,8 @@
 import { prisma } from '../../config/database.js';
 import { runSecurityScan, runPriceScan, calculateVerdict } from './spamDetector.js';
 import { logger } from '../../utils/logger.js';
+// Production Integration: Use your healthy provider factory
+import { getHealthyProvider } from '../../blockchain/provider.js';
 import { ethers, isAddress, keccak256, solidityPacked } from 'ethers';
 
 /**
@@ -18,7 +20,7 @@ export class AegisEngine {
    * The "Grand Orchestrator": Processes assets with JIT (Just-In-Time) Verification.
    * Adapts re-scan frequency based on asset risk, code stability, and logic volatility.
    */
-  static async getVerdict(asset: any, provider: any) {
+  static async getVerdict(asset: any) { // Upgrade: No longer rely on passed provider
     const address = String(asset.address || '').toLowerCase().trim();
     const chainId = Number(asset.chainId) || 1;
     const id = `${chainId}-${address}`;
@@ -33,7 +35,23 @@ export class AegisEngine {
       // Fetches the current 'known' state from the Mesh.
       const live = await prisma.securityLiveRegistry.findUnique({ where: { id } });
 
+      /**
+       * UPGRADE: PERFORMANCE OPTIMIZATION
+       * If record exists and is fresh (within base TTL), skip RPC calls to save rate limits.
+       */
+      const now = Date.now();
+      if (live) {
+        const lastScannedMs = new Date(live.lastScanned).getTime();
+        const baseTTL = live.status === 'malicious' ? 86400000 : 1800000; 
+        if (now - lastScannedMs < baseTTL && live.status === 'malicious') {
+          return live; // Instant return for known malicious assets
+        }
+      }
+
       // 2. BLOCKCHAIN REALITY CHECK (RPC Fingerprinting)
+      // Production Upgrade: Automatically get the best healthy provider for this chain
+      const provider = await getHealthyProvider(chainId);
+
       // We hash the bytecode + proxy implementation to detect logic shifts instantly.
       const [onChainCode, onChainProxy] = await Promise.all([
         provider.getCode(address).catch(() => '0x'),
@@ -60,7 +78,7 @@ export class AegisEngine {
         const adaptiveTTL = baseTTL * (codeIntact ? trustMultiplier : 1);
         
         const lastScannedMs = new Date(live.lastScanned).getTime();
-        const isStale = (Date.now() - lastScannedMs) > adaptiveTTL;
+        const isStale = (now - lastScannedMs) > adaptiveTTL;
 
         // If Malicious: Permanent Block.
         // If Clean & Intact & Not Stale: Instant return from Supabase.
@@ -130,10 +148,13 @@ export class AegisEngine {
     } catch (error) {
       logger.error(`[Aegis-Engine] Logic Failure for ${address}:`, error instanceof Error ? error.stack : error);
       
+      // PRODUCTION UPGRADE: Fail-Caution instead of Fail-Clean
+      // This protects the user if the network/scanners are down.
       return { 
-        status: 'clean', 
+        status: 'dust', // Set as dust/clean with warning note
         securityNote: 'Verification Deferred (Network Congestion)', 
         usdValue: 0,
+        score: 0, // Force a low score during failure
         canRecover: true 
       };
     }

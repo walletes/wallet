@@ -1,5 +1,7 @@
 import { logger } from '../../utils/logger.js';
 import crypto from 'crypto';
+// Integrated: Pulling chain metadata for real-time pricing
+import { getChainById } from '../../blockchain/chains.js';
 
 /**
  * AEGIS-INTELLIGENCE v3.0 (2026 Enterprise SaaS Edition)
@@ -34,6 +36,10 @@ const CONFIG = {
 let goPlusAccessToken: string | null = null;
 let tokenExpiry = 0;
 let isRefreshing = false; // Production Add: Prevents auth race conditions
+
+// Production Add: Global cache for Native Asset prices (ETH, BNB, SOL, etc)
+const NATIVE_PRICE_CACHE: Record<string, { price: number, expiry: number }> = {};
+const NATIVE_CACHE_TTL = 1000 * 60 * 30; // 30 Minute local cache for gas tokens
 
 /**
  * Robust Auth: Handles token refresh with race-condition prevention
@@ -135,16 +141,40 @@ export async function runSecurityScan(address: string, chainId: number) {
 }
 
 /**
+ * Dynamic Oracle: Fetches native prices from Llama using Chain Config IDs
+ */
+async function getLiveNativePrice(nativePriceId: string): Promise<number> {
+  const now = Date.now();
+  if (NATIVE_PRICE_CACHE[nativePriceId] && NATIVE_PRICE_CACHE[nativePriceId].expiry > now) {
+    return NATIVE_PRICE_CACHE[nativePriceId].price;
+  }
+  try {
+    const res = await fetch(`${CONFIG.LLAMA_API}/coingecko:${nativePriceId}`, { signal: AbortSignal.timeout(4000) }).then(r => r.json());
+    const price = res.coins?.[`coingecko:${nativePriceId}`]?.price || 0;
+    if (price > 0) {
+      NATIVE_PRICE_CACHE[nativePriceId] = { price, expiry: now + NATIVE_CACHE_TTL };
+      return price;
+    }
+  } catch (e) { logger.warn(`[Aegis-Oracle] Native price failed for ${nativePriceId}`); }
+  return 0;
+}
+
+/**
  * Pricing Waterfall: Fallback logic for low-liquidity assets
  * UPGRADED: Returns liquidity for SaaS "Confidence Score"
  */
 export async function runPriceScan(address: string, symbol: string, chainId: number): Promise<{ price: number, liquidity: number }> {
   const sym = (symbol || '').toLowerCase();
-  // Production Add: Expanded Stable/Native Registry
-  const stableAssets = ['eth', 'weth', 'usdc', 'usdt', 'dai', 'bnb', 'matic', 'sol'];
-  if (stableAssets.includes(sym)) {
-    const isStable = ['usdc', 'usdt', 'dai'].includes(sym);
-    return { price: isStable ? 1 : 2500, liquidity: 999999999 };
+  const chain = getChainById(chainId);
+  
+  // Production Add: Expanded Stable/Native Registry linked to chains.ts
+  const stableAssets = ['usdc', 'usdt', 'dai', 'pyusd', 'usds', 'tusd'];
+  if (stableAssets.includes(sym)) return { price: 1, liquidity: 999999999 };
+
+  // UPGRADE: Dynamic Native Pricing (No more hardcoded 2500)
+  if (chain && sym === chain.symbol.toLowerCase()) {
+    const price = await getLiveNativePrice(chain.nativePriceId);
+    if (price > 0) return { price, liquidity: 999999999 };
   }
 
   try {
