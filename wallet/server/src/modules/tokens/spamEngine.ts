@@ -3,7 +3,7 @@ import { runSecurityScan, runPriceScan, calculateVerdict } from './spamDetector.
 import { logger } from '../../utils/logger.js';
 // Production Integration: Use your healthy provider factory
 import { getHealthyProvider } from '../../blockchain/provider.js';
-import { ethers, isAddress, keccak256, solidityPacked } from 'ethers';
+import { ethers, isAddress, keccak256, solidityPacked, zeroPadValue } from 'ethers';
 
 /**
  * AEGIS-ENGINE v3.2 (2026 Sovereign Grade)
@@ -53,16 +53,24 @@ export class AegisEngine {
       const provider = await getHealthyProvider(chainId);
 
       // We hash the bytecode + proxy implementation to detect logic shifts instantly.
-      const [onChainCode, onChainProxy] = await Promise.all([
+      const [onChainCode, rawProxy] = await Promise.all([
         provider.getCode(address).catch(() => '0x'),
-        provider.getStorage(address, IMPLEMENTATION_SLOT).catch(() => '0x0')
+        provider.getStorage(address, IMPLEMENTATION_SLOT).catch(() => '0x00')
       ]);
       
+      // Upgrade: Standardize hex length to 32-bytes to prevent Ethers v6 "invalid BytesLike" errors
+      const onChainProxy = (rawProxy === '0x' || rawProxy === '0x0' || !rawProxy) 
+        ? zeroPadValue('0x00', 32) 
+        : (rawProxy.length % 2 !== 0 ? zeroPadValue(rawProxy.replace('0x', '0x0'), 32) : zeroPadValue(rawProxy, 32));
+      
+      const safeCode = (onChainCode === '0x' || !onChainCode) ? '0x' : onChainCode;
+
       // Check if it's a proxy: If the implementation slot is not empty, it's a proxy.
-      const isProxyContract = onChainProxy !== '0x0000000000000000000000000000000000000000000000000000000000000000';
+      const isProxyContract = onChainProxy !== zeroPadValue('0x00', 32);
       
       // Ethers v6: Deterministic fingerprinting of the contract logic state
-      const currentFingerprint = keccak256(solidityPacked(['bytes', 'bytes'], [onChainCode, onChainProxy]));
+      // Upgrade: Using safeCode and padded onChainProxy to ensure valid solidityPacked execution
+      const currentFingerprint = keccak256(solidityPacked(['bytes', 'bytes'], [safeCode, onChainProxy]));
 
       // 3. ADAPTIVE DECISION MATRIX (The Learning Layer)
       if (live) {
@@ -99,51 +107,77 @@ export class AegisEngine {
       const verdict = calculateVerdict(asset, security, priceData);
 
       // 5. ATOMIC SYNC (Live Registry + Master Archive)
-      // UPGRADED: Now populates SaaS metrics (upgradeCount, initialFingerprint, isProxy, isVerifiedSource)
-      return await prisma.$transaction(async (tx: any) => {
-        const hasChanged = live && live.fingerprint !== currentFingerprint;
+      // UPGRADED: Added Recursive Retry Loop with Randomized Jitter for high-concurrency stability
+      let attempts = 0;
+      const maxAttempts = 5; // Increased attempts for heavy production load
 
-        const updated = await tx.securityLiveRegistry.upsert({
-          where: { id },
-          update: { 
-            ...verdict, 
-            fingerprint: currentFingerprint, 
-            lastScanned: new Date(),
-            timesScanned: { increment: 1 },
-            isProxy: isProxyContract,
-            isVerifiedSource: verdict.isVerifiedSource || false,
-            // If the fingerprint changed, we increment the upgrade counter for your SaaS data
-            upgradeCount: hasChanged ? { increment: 1 } : undefined,
-            lastChangeFound: hasChanged ? new Date() : live?.lastChangeFound
-          },
-          create: { 
-            id, 
-            address, 
-            chainId, 
-            ...verdict, 
-            fingerprint: currentFingerprint,
-            initialFingerprint: currentFingerprint, // Set the "Birth" fingerprint
-            isProxy: isProxyContract,
-            isVerifiedSource: verdict.isVerifiedSource || false,
-            upgradeCount: 0,
-            timesScanned: 1
+      while (attempts < maxAttempts) {
+        try {
+          // PRODUCTION UPGRADE: Use default isolation with explicit retry logic to handle Postgres row-locks
+          return await prisma.$transaction(async (tx: any) => {
+            const hasChanged = live && live.fingerprint !== currentFingerprint;
+
+            const updated = await tx.securityLiveRegistry.upsert({
+              where: { id },
+              update: { 
+                ...verdict, 
+                fingerprint: currentFingerprint, 
+                lastScanned: new Date(),
+                timesScanned: { increment: 1 },
+                isProxy: isProxyContract,
+                isVerifiedSource: verdict.isVerifiedSource || false,
+                // If the fingerprint changed, we increment the upgrade counter for your SaaS data
+                upgradeCount: hasChanged ? { increment: 1 } : undefined,
+                lastChangeFound: hasChanged ? new Date() : live?.lastChangeFound
+              },
+              create: { 
+                id, 
+                address, 
+                chainId, 
+                ...verdict, 
+                fingerprint: currentFingerprint,
+                initialFingerprint: currentFingerprint, // Set the "Birth" fingerprint
+                isProxy: isProxyContract,
+                isVerifiedSource: verdict.isVerifiedSource || false,
+                upgradeCount: 0,
+                timesScanned: 1
+              }
+            });
+
+            // Archive entry: Building the "Time-Machine"
+            await tx.securityMasterArchive.create({
+              data: {
+                address,
+                chainId,
+                previousStatus: live?.status || 'NONE',
+                newStatus: verdict.status,
+                fingerprint: currentFingerprint,
+                changeType: !live ? 'NEW_DISCOVERY' : (hasChanged ? 'PROXY_UPGRADE' : 'RE_VERIFICATION')
+              }
+            });
+
+            return updated;
+          }, {
+            // Production Upgrade: Standard timeout to prevent orphan hangs
+            timeout: 15000
+          });
+        } catch (dbError: any) {
+          attempts++;
+          // UPGRADE: Improved error detection for aborted transactions and serialization conflicts
+          const isRetryable = dbError.code === 'P2002' || 
+                            dbError.message?.includes('aborted') || 
+                            dbError.message?.includes('conflict') ||
+                            dbError.message?.includes('deadlock');
+
+          if (isRetryable && attempts < maxAttempts) {
+            // Production Jitter: Spread retries randomly to break concurrent lock-steps
+            const jitter = Math.floor(Math.random() * 100) + (attempts * 100);
+            await new Promise(res => setTimeout(res, jitter));
+            continue;
           }
-        });
-
-        // Archive entry: Building the "Time-Machine"
-        await tx.securityMasterArchive.create({
-          data: {
-            address,
-            chainId,
-            previousStatus: live?.status || 'NONE',
-            newStatus: verdict.status,
-            fingerprint: currentFingerprint,
-            changeType: !live ? 'NEW_DISCOVERY' : (hasChanged ? 'PROXY_UPGRADE' : 'RE_VERIFICATION')
-          }
-        });
-
-        return updated;
-      });
+          throw dbError;
+        }
+      }
 
     } catch (error) {
       logger.error(`[Aegis-Engine] Logic Failure for ${address}:`, error instanceof Error ? error.stack : error);
@@ -152,7 +186,7 @@ export class AegisEngine {
       // This protects the user if the network/scanners are down.
       return { 
         status: 'dust', // Set as dust/clean with warning note
-        securityNote: 'Verification Deferred (Network Congestion)', 
+        securityNote: 'Verification Deferred (Sync Conflict)', 
         usdValue: 0,
         score: 0, // Force a low score during failure
         canRecover: true 

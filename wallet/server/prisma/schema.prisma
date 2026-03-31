@@ -217,7 +217,9 @@ model SecurityLiveRegistry {
   symbol            String?
   status            String   // verified | spam | dust | clean | malicious
   securityNote      String?
+  score             Int      @default(0)    // ADDED: Missing field from calculation
   usdValue          Float    @default(0)
+  liquidityUsd      Float    @default(0)    // ADDED: Missing field from pricing scan
   fingerprint       String   // keccak256(bytecode + implementationSlot)
   
   // --- INSTITUTIONAL ANALYTICS ---
@@ -230,6 +232,7 @@ model SecurityLiveRegistry {
   isHoneypot        Boolean  @default(false)
   sellTax           Float    @default(0)
   timesScanned      Int      @default(1)
+  canRecover        Boolean  @default(true) // ADDED: Missing field from verdict
   lastChangeFound   DateTime?
   lastScanned       DateTime @default(now())
 
