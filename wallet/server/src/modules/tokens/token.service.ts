@@ -9,6 +9,7 @@ import pLimit from 'p-limit';
  * UPGRADED: Institutional Token Intelligence Engine (v2026.5).
  * Optimized for: Wallet Service Compatibility and Strict Type Safety.
  * Philosophy: Real-time Fingerprinting via Aegis-Engine Mesh.
+ * Alignment: Fully synchronized with Object-based Pricing and SaaS Schema.
  */
 export const tokenService = {
   cache: new Map<string, { data: any, timestamp: number }>(),
@@ -74,8 +75,9 @@ export const tokenService = {
             let finalAnalysis = analysis;
             if (analysis.status === 'clean' && analysis.securityNote?.includes('Deferred')) {
               const security = await runSecurityScan(asset.address, asset.chainId);
-              const pricing = await runPriceScan(asset.address, asset.symbol || '', asset.chainId);
-              finalAnalysis = calculateVerdict(asset, security, pricing);
+              // Aligned: runPriceScan now returns { price, liquidity }
+              const pricingData = await runPriceScan(asset.address, asset.symbol || '', asset.chainId);
+              finalAnalysis = calculateVerdict(asset, security, pricingData);
             }
 
             const isSuspicious = finalAnalysis.status === 'spam' || 
@@ -91,7 +93,11 @@ export const tokenService = {
               hasTransferHook: !!(finalAnalysis.hasHooks || finalAnalysis.hasTransferHook),
               lastAudit: new Date().toISOString(),
               // Strict Recovery Check for real finance
-              isRecoverable: finalAnalysis.canRecover && !isSuspicious && !finalAnalysis.isBlacklisted
+              // Upgrade: Check for blacklisted status and malicious status
+              isRecoverable: finalAnalysis.canRecover && 
+                             !isSuspicious && 
+                             !finalAnalysis.isBlacklisted && 
+                             finalAnalysis.status !== 'malicious'
             };
           } catch (e: any) {
             logger.warn(`[TokenService][${traceId}] Asset Audit bypassed: ${asset.symbol}`);
@@ -124,7 +130,9 @@ export const tokenService = {
         riskScore: Number((riskRatio * 100).toFixed(0)),
         spamCount: audited.filter(a => a.status === 'spam').length,
         dustCount: audited.filter(a => a.status === 'dust').length,
-        maliciousCount: audited.filter(a => a.status === 'malicious').length
+        maliciousCount: audited.filter(a => a.status === 'malicious').length,
+        // SaaS Metric: Expose logic drifts to the summary
+        driftCount: audited.filter(a => a.upgradeCount > 0).length
       },
       groups: {
         liquid: recoverable.sort((a, b) => (b.usdValue || 0) - (a.usdValue || 0)),
