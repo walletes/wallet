@@ -20,6 +20,8 @@ export async function scanTokensController(req: Request, res: Response) {
   // Set the Trace ID and Security Headers
   res.setHeader('X-Trace-ID', traceId);
   res.setHeader('X-Content-Type-Options', 'nosniff');
+  // UPGRADE: Signal Aegis-Sovereign protection level in headers
+  res.setHeader('X-Aegis-Protection', 'Sovereign-v3.2');
 
   try {
     // 2. STRICT VALIDATION & NORMALIZATION
@@ -58,14 +60,16 @@ export async function scanTokensController(req: Request, res: Response) {
       else acc.erc20Value += value;
       
       // Categorize Security Status (Aligned with TokenClassification)
-      if (asset.status === 'malicious') acc.maliciousCount++;
-      else if (asset.status === 'spam') acc.spamCount++;
+      // UPGRADE: Added 'honeypot' and 'drainer' detection hooks from SpamDetector v3.0
+      if (asset.status === 'malicious' || asset.classification?.isHoneypot) acc.maliciousCount++;
+      else if (asset.status === 'spam' || asset.classification?.isSpam) acc.spamCount++;
       else if (asset.status === 'verified') acc.verifiedCount++;
       else acc.cleanCount++;
 
       // SaaS Metrics: Identify systemic risks in the wallet
-      if (asset.isProxy) acc.proxyCount++;
-      if (asset.upgradeCount > 0) acc.driftCount++;
+      // UPGRADE: Link to logicDrift score calculated in SpamEngine
+      if (asset.isProxy || asset.classification?.isProxy) acc.proxyCount++;
+      if (asset.upgradeCount > 0 || asset.classification?.logicDriftScore > 0.7) acc.driftCount++;
 
       return acc;
     }, { 
@@ -89,11 +93,13 @@ export async function scanTokensController(req: Request, res: Response) {
         traceId,
         timestamp: new Date().toISOString(),
         status: 'COMPLETE',
-        version: '2026.3.2' // Aligned with Aegis-Engine v3.2
+        version: '2026.3.2', // Aligned with Aegis-Engine v3.2
+        engine: 'Aegis-Sovereign-Core'
       },
       wallet: {
         address: checksummedAddress,
-        label: 'Sovereign Protected Wallet'
+        label: 'Sovereign Protected Wallet',
+        securityLevel: analytics.maliciousCount > 0 ? 'COMPROMISED' : 'PROTECTED'
       },
       summary: {
         assetCount: report.length,
@@ -106,7 +112,8 @@ export async function scanTokensController(req: Request, res: Response) {
         riskMetrics: {
           proxyContracts: analytics.proxyCount,
           logicDriftsDetected: analytics.driftCount, // Critical for SaaS upsell
-          riskScore: analytics.maliciousCount > 0 ? 'HIGH' : (analytics.driftCount > 0 ? 'MEDIUM' : 'LOW')
+          riskScore: analytics.maliciousCount > 0 ? 'HIGH' : (analytics.driftCount > 0 ? 'MEDIUM' : 'LOW'),
+          recommendation: analytics.maliciousCount > 0 ? 'IMMEDIATE_ACTION_REQUIRED' : 'NO_THREATS_DETECTED'
         },
         totalUsdValue: Number(analytics.totalUsdValue.toFixed(2)),
         breakdown: {

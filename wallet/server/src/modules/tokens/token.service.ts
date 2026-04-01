@@ -4,6 +4,7 @@ import { AegisEngine } from './spamEngine.js'; // Upgrade: The primary intellige
 import { logger } from '../../utils/logger.js';
 import crypto from 'crypto';
 import pLimit from 'p-limit';
+import Decimal from 'decimal.js';
 
 /**
  * UPGRADED: Institutional Token Intelligence Engine (v2026.5).
@@ -25,6 +26,14 @@ export const tokenService = {
       logger.warn(`[TokenService][${traceId}] Scan in progress for ${safeAddr}`);
       // Upgrade: Jitter-wait to prevent thundering herd on the same wallet
       await new Promise(r => setTimeout(r, 1500 + Math.random() * 500));
+      
+      // PRODUCTION UPGRADE: Double-Check Lock - Verify if the previous scan populated the cache
+      if (!forceRefresh && this.cache.has(safeAddr)) {
+        const lateCached = this.cache.get(safeAddr)!;
+        if (Date.now() - lateCached.timestamp < this.CACHE_TTL) {
+          return { ...lateCached.data, cached: true, traceId };
+        }
+      }
     }
 
     if (!forceRefresh && this.cache.has(safeAddr)) {
@@ -38,7 +47,10 @@ export const tokenService = {
     try {
       this.locks.add(safeAddr);
       const rawAssets = await scanGlobalWallet(safeAddr);
-      const categorized = await this.categorizeAssets(rawAssets, traceId);
+      
+      // PRODUCTION UPGRADE: Memory Guard - Truncate excessive dust tokens to prevent OOM
+      const assetsToScan = rawAssets.length > 500 ? rawAssets.slice(0, 500) : rawAssets;
+      const categorized = await this.categorizeAssets(assetsToScan, traceId);
 
       if (this.cache.size >= this.MAX_CACHE_SIZE) {
         const oldestKey = this.cache.keys().next().value;
@@ -111,11 +123,12 @@ export const tokenService = {
       .map(r => r.status === 'fulfilled' ? r.value : null)
       .filter(Boolean) as any[];
 
-    const totalValue = audited.reduce((sum, a) => sum + (Number(a.usdValue) || 0), 0);
+    // PRODUCTION UPGRADE: Precision Math for Total Values
+    const totalValue = audited.reduce((sum, a) => sum.plus(a.usdValue || 0), new Decimal(0));
     const recoverable = audited.filter(a => a.isRecoverable);
-    const recoverableValue = recoverable.reduce((sum, a) => sum + (Number(a.usdValue) || 0), 0);
+    const recoverableValue = recoverable.reduce((sum, a) => sum.plus(a.usdValue || 0), new Decimal(0));
 
-    const riskRatio = totalValue > 0 ? (recoverableValue / totalValue) : 1;
+    const riskRatio = totalValue.gt(0) ? recoverableValue.div(totalValue).toNumber() : 1;
     // Upgrade: Strict risk thresholds for Sovereign wallets
     const healthStatus = riskRatio < 0.4 ? 'CRITICAL_EXPOSURE' : riskRatio < 0.75 ? 'DEGRADED' : 'OPTIMAL';
 

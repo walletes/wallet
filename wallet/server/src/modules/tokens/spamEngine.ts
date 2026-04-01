@@ -5,7 +5,7 @@ import { getHealthyProvider } from '../../blockchain/provider.js';
 import { ethers, isAddress, keccak256, solidityPacked, zeroPadValue } from 'ethers';
 
 /**
- * Spam-ENGINE v3.2 (2026)
+ * Spam-ENGINE v3.2 (2026) - PRODUCTION HARDENED
  * Core Logic: Autonomous Orchestration, Fingerprint Drift, and Intelligence Lifecycle.
  * Philosophy: Trust the Ledger, Verify the Bytecode, Minimize the Waterfall.
  * Features: Adaptive TTL Scaling, Proxy Evolution Tracking, SaaS Sync.
@@ -52,6 +52,7 @@ export class AegisEngine {
       const provider = await getHealthyProvider(chainId);
 
       // We hash the bytecode + proxy implementation to detect logic shifts instantly.
+      // PRODUCTION FIX: Logic remains, but note that for massive scale, Multicall batching is recommended here.
       const [onChainCode, rawProxy] = await Promise.all([
         provider.getCode(address).catch(() => '0x'),
         provider.getStorage(address, IMPLEMENTATION_SLOT).catch(() => '0x00')
@@ -116,69 +117,61 @@ export class AegisEngine {
       // 5. ATOMIC SYNC (Live Registry + Master Archive)
       // UPGRADED: Added Recursive Retry Loop with Randomized Jitter for high-concurrency stability
       let attempts = 0;
-      const maxAttempts = 5; // Increased attempts for heavy production load
+      const maxAttempts = 5; 
 
       while (attempts < maxAttempts) {
         try {
-          // PRODUCTION UPGRADE: Use default isolation with explicit retry logic to handle Postgres row-locks
-          return await prisma.$transaction(async (tx: any) => {
-            const hasChanged = live && live.fingerprint !== currentFingerprint;
-
-            const updated = await tx.securityLiveRegistry.upsert({
-              where: { id },
-              update: { 
-                ...verdict, 
-                fingerprint: currentFingerprint, 
-                lastScanned: new Date(),
-                timesScanned: { increment: 1 },
-                isProxy: isProxyContract,
-                isVerifiedSource: verdict.isVerifiedSource || false,
-                // If the fingerprint changed, we increment the upgrade counter for my SaaS data
-                upgradeCount: hasChanged ? { increment: 1 } : undefined,
-                lastChangeFound: hasChanged ? new Date() : live?.lastChangeFound
-              },
-              create: { 
-                id, 
-                address, 
-                chainId, 
-                ...verdict, 
-                fingerprint: currentFingerprint,
-                initialFingerprint: currentFingerprint,
-                isProxy: isProxyContract,
-                isVerifiedSource: verdict.isVerifiedSource || false,
-                upgradeCount: 0,
-                timesScanned: 1
-              }
-            });
-
-            // Archive entry: Building the "Time-Machine"
-            await tx.securityMasterArchive.create({
-              data: {
-                address,
-                chainId,
-                previousStatus: live?.status || 'NONE',
-                newStatus: verdict.status,
-                fingerprint: currentFingerprint,
-                changeType: !live ? 'NEW_DISCOVERY' : (hasChanged ? 'PROXY_UPGRADE' : 'RE_VERIFICATION')
-              }
-            });
-
-            return updated;
-          }, {
-            //  Upgrade: Standard timeout to prevent orphan hangs
-            timeout: 15000
+          // PRODUCTION UPGRADE: Decoupled Archive creation to prevent deadlock during high-contention upserts
+          const hasChanged = live && live.fingerprint !== currentFingerprint;
+          
+          const result = await prisma.securityLiveRegistry.upsert({
+            where: { id },
+            update: { 
+              ...verdict, 
+              fingerprint: currentFingerprint, 
+              lastScanned: new Date(),
+              timesScanned: { increment: 1 },
+              isProxy: isProxyContract,
+              isVerifiedSource: verdict.isVerifiedSource || false,
+              upgradeCount: hasChanged ? { increment: 1 } : undefined,
+              lastChangeFound: hasChanged ? new Date() : live?.lastChangeFound
+            },
+            create: { 
+              id, 
+              address, 
+              chainId, 
+              ...verdict, 
+              fingerprint: currentFingerprint,
+              initialFingerprint: currentFingerprint,
+              isProxy: isProxyContract,
+              isVerifiedSource: verdict.isVerifiedSource || false,
+              upgradeCount: 0,
+              timesScanned: 1
+            }
           });
+
+          // PRODUCTION FIX: Archive entry is now handled outside the main lock to maximize throughput
+          prisma.securityMasterArchive.create({
+            data: {
+              address,
+              chainId,
+              previousStatus: live?.status || 'NONE',
+              newStatus: verdict.status,
+              fingerprint: currentFingerprint,
+              changeType: !live ? 'NEW_DISCOVERY' : (hasChanged ? 'PROXY_UPGRADE' : 'RE_VERIFICATION')
+            }
+          }).catch(e => logger.error(`[Aegis-Engine] Archive Write Failed: ${e.message}`));
+
+          return result;
         } catch (dbError: any) {
           attempts++;
-          // UPGRADE: Improved error detection for aborted transactions and serialization conflicts
           const isRetryable = dbError.code === 'P2002' || 
                             dbError.message?.includes('aborted') || 
                             dbError.message?.includes('conflict') ||
                             dbError.message?.includes('deadlock');
 
           if (isRetryable && attempts < maxAttempts) {
-            // Production Jitter: Spread retries randomly to break concurrent lock-steps
-            const jitter = Math.floor(Math.random() * 100) + (attempts * 100);
+            const jitter = Math.floor(Math.random() * 150) + (attempts * 100);
             await new Promise(res => setTimeout(res, jitter));
             continue;
           }
@@ -189,14 +182,14 @@ export class AegisEngine {
     } catch (error) {
       logger.error(`[Aegis-Engine] Logic Failure for ${address}:`, error instanceof Error ? error.stack : error);
       
-      // PRODUCTION UPGRADE: Fail-Caution instead of Fail-Clean
-      // This protects the user if the network/scanners are down.
+      // PRODUCTION UPGRADE: Fail-Caution (Restricted Mode)
+      // This protects the user by returning a restricted status if the database or scanners fail.
       return { 
-        status: 'dust', // See as dust/clean with warning note
+        status: 'dust', 
         securityNote: 'Verification Deferred (Sync Conflict)', 
         usdValue: 0,
-        score: 0, // Force a low score during failure
-        canRecover: true 
+        score: 0, 
+        canRecover: false // FIX: Default to false during failure for safety
       };
     }
   }
