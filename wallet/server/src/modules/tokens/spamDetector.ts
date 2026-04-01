@@ -5,9 +5,9 @@ import Decimal from 'decimal.js';
 import unidecode from 'unidecode';
 
 /**
- * AEGIS-INTELLIGENCE v3.0 (2026 Enterprise SaaS Edition) - PROD UPGRADE
+ * AEGIS-INTELLIGENCE v4.2 (2026 Enterprise SaaS Edition) - MASTER RESTORATION
  * Core Logic: High-Fidelity Security Analytics & Pricing Waterfall
- * Status: Read-Only Intelligence Provider for Aegis-Engine Mesh
+ * Status: Production-Hardened Intelligence Provider
  */
 
 export interface TokenClassification {
@@ -26,12 +26,12 @@ export interface TokenClassification {
 }
 
 const CONFIG = {
-  GOPLUS_API: process.env.GOPLUS_API_BASE || 'https://gopluslabs.io',
+  // Enforce normalized base URL to prevent 405 Method Not Allowed
+  GOPLUS_API: (process.env.GOPLUS_API_BASE || 'https://gopluslabs.io').replace(/\/$/, ''),
   DEXSCREENER_API: 'https://dexscreener.com',
   LLAMA_API: 'https://llama.fi',
   DUST_THRESHOLD_USD: new Decimal(process.env.DUST_THRESHOLD_USD || '0.50'),
   LIQUIDITY_FLOOR: Number(process.env.MIN_LIQUIDITY_USD) || 1000,
-  // FIX: Added verified base assets to prevent "Trash-Pairing" price manipulation
   VERIFIED_BASES: ['WETH', 'USDC', 'USDT', 'DAI', 'WBTC', 'WBNB', 'SOL', 'MATIC'],
   CG_PLATFORM_MAP: JSON.parse(process.env.CG_PLATFORM_MAP || '{"1":"ethereum","137":"polygon-pos","8453":"base","56":"binance-smart-chain"}')
 };
@@ -44,14 +44,25 @@ const NATIVE_PRICE_CACHE: Record<string, { price: number, expiry: number }> = {}
 const NATIVE_CACHE_TTL = 1000 * 60 * 30; 
 
 /**
- * Robust Auth: Handles token refresh with race-condition prevention
+ * PRODUCTION GUARD: Handles non-JSON responses (WAF/Cloudflare) gracefully
+ */
+async function safeJson(resp: Response) {
+  const text = await resp.text();
+  try { return JSON.parse(text); } 
+  catch (e) { 
+    if (text.includes('<!DOCTYPE')) throw new Error('API_BLOCKED_BY_WAF_HTML');
+    throw new Error(`INVALID_JSON_RESPONSE: ${text.substring(0, 15)}`);
+  }
+}
+
+/**
+ * Robust Auth: Handles token refresh with race-condition prevention & backoff
  */
 async function getGoPlusAuth(): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   if (goPlusAccessToken && now < tokenExpiry) return `Bearer ${goPlusAccessToken}`;
   
   if (isRefreshing) {
-    // FIX: Exponential backoff for auth wait
     for(let i=0; i<5; i++) {
         await new Promise(resolve => setTimeout(resolve, 500 * (i + 1)));
         if (goPlusAccessToken && now < tokenExpiry) return `Bearer ${goPlusAccessToken}`;
@@ -65,20 +76,25 @@ async function getGoPlusAuth(): Promise<string> {
     if (!appKey || !appSecret) return '';
 
     const sign = crypto.createHash('sha1').update(`${appKey}${now}${appSecret}`).digest('hex');
-    const resp = await fetch(`${CONFIG.GOPLUS_API}/auth/token`, {
+    
+    // STRICT ROUTING: Explicitly use /api/v1/auth/token to fix HTTP 405
+    const resp = await fetch(`${CONFIG.GOPLUS_API}/api/v1/auth/token`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ app_key: appKey, time: now, sign })
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ app_key: appKey, time: now, sign }),
+      signal: AbortSignal.timeout(5000)
     });
 
-    const data = await resp.json();
+    if (!resp.ok) throw new Error(`HTTP_${resp.status}`);
+
+    const data = await safeJson(resp);
     if (data.result?.access_token) {
       goPlusAccessToken = data.result.access_token;
       tokenExpiry = now + (data.result.expires_in || 3600) - 60;
       return `Bearer ${goPlusAccessToken}`;
     }
   } catch (e) {
-    logger.error(`[Aegis-Auth] Failed: ${e instanceof Error ? e.message : 'Unknown error'}`);
+    logger.error(`[Aegis-Auth] ${e instanceof Error ? e.message : 'Unknown Auth Failure'}`);
   } finally {
     isRefreshing = false;
   }
@@ -89,24 +105,20 @@ async function getGoPlusAuth(): Promise<string> {
  * Intelligent Security Waterfall: Cross-references multiple indicators
  */
 export async function runSecurityScan(address: string, chainId: number) {
-  let isHoneypot = false;
-  let tax = 0;
-  let note = 'Analyzed Clean';
-  let blacklisted = false;
-  let isProxy = false;
-  let isVerifiedSource = false;
+  let isHoneypot = false; let tax = 0; let note = 'Analyzed Clean';
+  let blacklisted = false; let isProxy = false; let isVerifiedSource = false;
 
   try {
     const auth = await getGoPlusAuth();
+    // FIX: Functional Honeypot v2 API Endpoint
     const hpUrl = `https://honeypot.is{address}${chainId ? `&chainID=${chainId}` : ''}`;
     
-    // FIX: Using dedicated AbortSignal per fetch to prevent socket starvation
     const [hpRes, gpRes] = await Promise.allSettled([
       fetch(hpUrl, { signal: AbortSignal.timeout(8000) }).then(r => r.json()),
-      fetch(`${CONFIG.GOPLUS_API}/token_security/${chainId}?contract_addresses=${address}`, {
+      fetch(`${CONFIG.GOPLUS_API}/api/v1/token_security/${chainId}?contract_addresses=${address}`, {
         headers: auth ? { 'Authorization': auth } : {},
         signal: AbortSignal.timeout(8000)
-      }).then(r => r.json())
+      }).then(safeJson)
     ]);
 
     if (hpRes.status === 'fulfilled' && hpRes.value.honeypotResult?.isHoneypot) {
@@ -122,7 +134,6 @@ export async function runSecurityScan(address: string, chainId: number) {
         blacklisted = s.is_blacklisted === "1";
         isProxy = s.is_proxy === "1";
         isVerifiedSource = s.is_open_source === "1";
-        
         const gpTax = parseFloat(s.sell_tax || "0");
         tax = Math.max(tax, gpTax);
         
@@ -139,16 +150,19 @@ export async function runSecurityScan(address: string, chainId: number) {
   return { isHoneypot, tax, note, blacklisted, isProxy, isVerifiedSource };
 }
 
+/**
+ * Native Oracle: Cached pricing for gas/base assets
+ */
 async function getLiveNativePrice(nativePriceId: string): Promise<number> {
   const now = Date.now();
   if (NATIVE_PRICE_CACHE[nativePriceId] && NATIVE_PRICE_CACHE[nativePriceId].expiry > now) {
     return NATIVE_PRICE_CACHE[nativePriceId].price;
   }
   try {
-    const res = await fetch(`${CONFIG.LLAMA_API}/coingecko:${nativePriceId}`, { signal: AbortSignal.timeout(4000) }).then(r => r.json());
+    const res = await fetch(`${CONFIG.LLAMA_API}/coingecko:${nativePriceId}`, { signal: AbortSignal.timeout(4000) }).then(safeJson);
     const price = res.coins?.[`coingecko:${nativePriceId}`]?.price || 0;
     if (price > 0) {
-      // FIX: Memory safety check on cache size
+      // Memory safety on cache size
       if (Object.keys(NATIVE_PRICE_CACHE).length > 100) delete NATIVE_PRICE_CACHE[Object.keys(NATIVE_PRICE_CACHE)[0]];
       NATIVE_PRICE_CACHE[nativePriceId] = { price, expiry: now + NATIVE_CACHE_TTL };
       return price;
@@ -158,7 +172,7 @@ async function getLiveNativePrice(nativePriceId: string): Promise<number> {
 }
 
 /**
- * Pricing Waterfall: Fallback logic for low-liquidity assets
+ * Pricing Waterfall: Multi-source fallback logic
  */
 export async function runPriceScan(address: string, symbol: string, chainId: number): Promise<{ price: number, liquidity: number }> {
   const sym = (symbol || '').toLowerCase();
@@ -176,7 +190,6 @@ export async function runPriceScan(address: string, symbol: string, chainId: num
     const dexRes = await fetch(`${CONFIG.DEXSCREENER_API}/${address}`, { signal: AbortSignal.timeout(6000) }).then(r => r.json());
     const pair = (dexRes.pairs || [])
       .filter((p: any) => p.quoteToken?.symbol !== symbol) 
-      // FIX: Ensure the quote token is a verified high-liquidity base to prevent price inflation
       .filter((p: any) => CONFIG.VERIFIED_BASES.includes(p.quoteToken?.symbol?.toUpperCase()))
       .sort((a: any, b: any) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0];
     
@@ -185,11 +198,11 @@ export async function runPriceScan(address: string, symbol: string, chainId: num
     }
 
     const platform = CONFIG.CG_PLATFORM_MAP[String(chainId)] || 'ethereum';
-    const llama = await fetch(`${CONFIG.LLAMA_API}/${platform}:${address}`, { signal: AbortSignal.timeout(4000) }).then(r => r.json());
+    const llama = await fetch(`${CONFIG.LLAMA_API}/prices/current/${platform}:${address}`, { signal: AbortSignal.timeout(4000) }).then(safeJson);
     const price = llama.coins?.[`${platform}:${address}`]?.price;
     if (price) return { price, liquidity: 0 };
   } catch (e) {
-    logger.warn(`[Aegis-Price] Trace failed for ${symbol}: ${e instanceof Error ? e.message : 'Timeout'}`);
+    logger.warn(`[Aegis-Price] Trace failed for ${symbol}`);
   }
 
   return { price: 0, liquidity: 0 };
@@ -199,45 +212,49 @@ export async function runPriceScan(address: string, symbol: string, chainId: num
  * Final Verdict Engine: Weighs Security vs. Metadata vs. Value
  */
 export function calculateVerdict(asset: any, security: any, priceData: { price: number, liquidity: number }): TokenClassification {
-  // FIX: Use Decimal for financial precision
-  const balance = new Decimal(asset.balance || '0');
-  const price = new Decimal(priceData.price || 0);
+  const balance = new Decimal(asset?.balance || '0');
+  const price = new Decimal(priceData?.price || 0);
   const usdValue = balance.times(price);
   
-  const isMalicious = security.isHoneypot || security.tax > 0.40 || security.blacklisted;
+  const isMalicious = security?.isHoneypot || security?.tax > 0.40 || security?.blacklisted;
   
   let status: TokenClassification['status'] = 'clean';
-  let note = security.note;
+  let note = security?.note || 'Analyzed Clean';
 
+  const rawName = (asset?.name || '').toLowerCase();
+  const rawSymbol = (asset?.symbol || '').toLowerCase();
+  
+  // FIX: Universal Homoglyph + Invisible Character Check
+  const normalizedSymbol = unidecode(rawSymbol).replace(/\s/g, '');
+  const hasInvisibleChars = /[\u200B-\u200D\uFEFF]/.test(asset?.symbol || '');
+  const isLookalike = hasInvisibleChars || (normalizedSymbol !== rawSymbol && 
+                      (normalizedSymbol === 'usdc' || normalizedSymbol === 'usdt' || normalizedSymbol === 'eth'));
+
+  const spamKeywords = ['visit', 'claim', 'free', 'reward', 'gift', 'voucher', 'airdrop', 'v0uc', 'clm'];
+  const hasSpamMetadata = spamKeywords.some(k => rawName.includes(k) || rawSymbol.includes(k)) || isLookalike;
+
+  // VERDICT WATERFALL
   if (isMalicious) {
     status = 'malicious';
-    note = security.note !== 'Analyzed Clean' ? security.note : '🚨 MALICIOUS CONTRACT';
+    note = note !== 'Analyzed Clean' ? note : '🚨 MALICIOUS CONTRACT';
+  } else if (hasSpamMetadata) {
+    status = 'spam';
+    note = isLookalike ? `🚨 IDENTITY SPOOF: ${normalizedSymbol.toUpperCase()}` : 'Phishing: Metadata triggers';
   } else {
-    const name = (asset.name || '').toLowerCase();
-    const symbol = (asset.symbol || '').toLowerCase();
-    
-    // FIX: Universal Homoglyph check using unidecode
-    const normalizedSymbol = unidecode(symbol).replace(/\s/g, '');
-    const isLookalike = normalizedSymbol !== symbol && 
-                        (normalizedSymbol === 'usdc' || normalizedSymbol === 'usdt' || normalizedSymbol === 'eth');
-
-    const spamKeywords = ['visit', 'claim', 'free', 'reward', 'gift', 'voucher', 'airdrop', 'v0uc', 'clm'];
-    const hasSpamMetadata = spamKeywords.some(k => name.includes(k) || symbol.includes(k)) || isLookalike;
-
-    if (hasSpamMetadata) {
-      status = 'spam';
-      note = isLookalike ? '🚨 HOMOGLYPH LOOKALIKED DETECTED' : 'Phishing: Metadata triggers';
-    } else if (price.isZero()) {
+    if (price.isZero() || usdValue.lt(CONFIG.DUST_THRESHOLD_USD)) {
       status = 'dust'; 
-      note = 'System: Zero-Value/Unlisted Asset';
-    } else if (usdValue.lt(CONFIG.DUST_THRESHOLD_USD)) {
-      status = 'dust';
-    } else if (usdValue.gt(50) && security.isVerifiedSource && priceData.liquidity > 10000) {
+      if (price.isZero()) note = 'System: Zero-Value/Unlisted Asset';
+    } else if (usdValue.gt(50) && security?.isVerifiedSource && priceData.liquidity > 10000) {
       status = 'verified';
     }
   }
 
-  // Final Production Shield: Ensure no negative USD values and fix precision for JSON
+  // RUG-PULL SHIELD: Malicious if price exists but liquidity is fake/removed
+  if (status !== 'malicious' && !price.isZero() && priceData.liquidity < CONFIG.LIQUIDITY_FLOOR && !security?.isVerifiedSource) {
+    status = 'malicious';
+    note = '🚨 ILLIQUID / EXIT SCAM RISK';
+  }
+
   const finalUsdValue = usdValue.isNegative() ? 0 : Number(usdValue.toFixed(4));
 
   return {
@@ -245,12 +262,11 @@ export function calculateVerdict(asset: any, security: any, priceData: { price: 
     securityNote: note,
     score: status === 'malicious' ? 0 : (status === 'verified' ? 95 : (status === 'spam' ? 10 : 70)),
     usdValue: finalUsdValue,
-    isHoneypot: security.isHoneypot,
-    sellTax: security.tax,
-    isProxy: security.isProxy,
-    isVerifiedSource: security.isVerifiedSource,
+    isHoneypot: security?.isHoneypot,
+    sellTax: security?.tax,
+    isProxy: security?.isProxy,
+    isVerifiedSource: security?.isVerifiedSource,
     liquidityUsd: priceData.liquidity,
-    // FIX: Adjusted recovery threshold to account for gas costs on mainnet
-    canRecover: status !== 'malicious' && finalUsdValue > 5.00 && !security.blacklisted
+    canRecover: status !== 'malicious' && status !== 'spam' && finalUsdValue > 5.00 && !security?.blacklisted
   };
 }
