@@ -29,15 +29,29 @@ export function getAlchemyUrl(network: string): string {
 
 /**
  * Intelligent URL Generator (Now uses the Chain Intelligence Engine)
+ * UPGRADE: Prioritizes .env overrides (including legacy keys) and Alchemy before public fallbacks.
  */
 export function getNetworkUrl(network: string): string {
   const cleanName = network.toLowerCase().trim();
   
-  // 1. Check for specific Custom RPC in env
+  // 1. Check for specific Custom RPC in env (Standardized RPC_ETHEREUM or RPC_137)
   const customRpc = process.env[`RPC_${cleanName.toUpperCase()}`];
   if (customRpc) return customRpc;
 
-  // 2. Build Alchemy URL if key exists
+  // 2. UPGRADE: Check for Legacy .env keys (ETH_RPC, BSC_RPC, POLYGON_RPC, BASE_RPC_URL)
+  const legacyMapping: Record<string, string | undefined> = {
+    'ethereum': process.env.ETH_RPC,
+    '1': process.env.ETH_RPC,
+    'bsc': process.env.BSC_RPC,
+    '56': process.env.BSC_RPC,
+    'polygon': process.env.POLYGON_RPC,
+    '137': process.env.POLYGON_RPC,
+    'base': process.env.BASE_RPC_URL,
+    '8453': process.env.BASE_RPC_URL
+  };
+  if (legacyMapping[cleanName]) return legacyMapping[cleanName]!;
+
+  // 3. Build Alchemy URL if key exists
   const alchemyKey = process.env.ALCHEMY_API_KEY || process.env.ALCHEMY_KEY;
   if (alchemyKey) {
     // UPGRADE: Resilience check. If the env var is already a full URL, return it directly to avoid 404 double-prefixing.
@@ -48,11 +62,12 @@ export function getNetworkUrl(network: string): string {
     return `https://${slug}.g.alchemy.com/v2/${alchemyKey}`;
   }
 
-  // 3. Fallback to Chain Engine Discovery
+  // 4. Fallback to Chain Engine Discovery
   try {
     const chain = EVM_CHAINS.find(c => 
       c.name.toLowerCase() === cleanName || 
-      c.symbol.toLowerCase() === cleanName
+      c.symbol.toLowerCase() === cleanName ||
+      c.id.toString() === cleanName
     );
     // Note: Since this is synchronous, we take the first defined RPC as a default.
     // getHealthyProvider (async) will handle the latency-based discovery.
@@ -90,8 +105,11 @@ export function getProvider(rpcOrNetworkOrChainId: string | number, chainIdOverr
 
   if (typeof rpcOrNetworkOrChainId === 'number') {
     const chain = requireChain(rpcOrNetworkOrChainId);
-    // Synchronous fallback: use first RPC; getHealthyProvider will optimize later
-    url = chain.rpcs[0];
+    
+    // UPGRADE: First attempt to get a private/env URL for this chain ID before using public fallbacks
+    const envUrl = getNetworkUrl(chain.id.toString()) || getNetworkUrl(chain.name);
+    url = (envUrl && envUrl !== '') ? envUrl : chain.rpcs[0];
+    
     finalChainId = chain.id;
   } else {
     url = rpcOrNetworkOrChainId.startsWith('http') ? rpcOrNetworkOrChainId : getNetworkUrl(rpcOrNetworkOrChainId);

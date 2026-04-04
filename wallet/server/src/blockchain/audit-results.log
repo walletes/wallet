@@ -1,0 +1,87 @@
+[2026-04-04T23:21:10.321Z] --- 🛡️ AEGIS-SOVEREIGN RPC AUDIT STARTING ---
+[2026-04-04T23:21:10.321Z] Target: 41 chains configured.
+
+[2026-04-04T23:21:10.456Z] ✅ [Ethereum       ] https://eth.drpc.org                          | Block:  24809536 | Latency: 135ms
+[2026-04-04T23:21:10.571Z] ❌ [Ethereum       ] https://rpc.ankr.com/eth                      | FAILED: Unauthorized: You must authenticate your request w
+[2026-04-04T23:21:10.628Z] ✅ [BNB Smart Chain] https://bsc.drpc.org                          | Block:  90656046 | Latency: 57ms
+[2026-04-04T23:21:10.883Z] ✅ [BNB Smart Chain] https://bsc-dataseed.binance.org              | Block:  90656046 | Latency: 311ms
+[2026-04-04T23:21:10.906Z] ❌ [Polygon        ] https://rpc.ankr.com/polygon                  | FAILED: Unauthorized: You must authenticate your request w
+[2026-04-04T23:21:10.944Z] ✅ [Polygon        ] https://polygon.drpc.org                      | Block:  85112417 | Latency: 60ms
+[2026-04-04T23:21:11.000Z] ✅ [Base           ] https://base.drpc.org                         | Block:  44277762 | Latency: 56ms
+[2026-04-04T23:21:11.065Z] ✅ [Base           ] https://mainnet.base.org                      | Block:  44277762 | Latency: 120ms
+[2026-04-04T23:21:11.128Z] ✅ [Arbitrum One   ] https://arbitrum.drpc.org                     | Block: 449107870 | Latency: 63ms
+[2026-04-04T23:21:11.193Z] ✅ [Arbitrum One   ] https://arb1.arbitrum.io/rpc                  | Block: 449107869 | Latency: 127ms
+[2026-04-04T23:21:11.240Z] ✅ [Optimism       ] https://optimism.drpc.org                     | Block: 149873047 | Latency: 47ms
+[2026-04-04T23:21:11.260Z] ✅ [Optimism       ] https://mainnet.optimism.io                   | Block: 149873047 | Latency: 66ms
+[2026-04-04T23:21:11.278Z] ❌ [Avalanche      ] https://rpc.ankr.com/avalanche                | FAILED: Unauthorized: You must authenticate your request w
+[2026-04-04T23:21:11.308Z] ✅ [Avalanche      ] https://avalanche.drpc.org                    | Block:  82125314 | Latency: 48ms
+[2026-04-04T23:21:11.409Z] ✅ [zkSync Era     ] https://zksync.drpc.org                       | Block:  69404179 | Latency: 100ms
+[2026-04-04T23:21:11.434Z] ✅ [zkSync Era     ] https://mainnet.era.zksync.io                 | Block:  69404179 | Latency: 126ms
+[2026-04-04T23:21:11.484Z] ✅ [Sonic          ] https://sonic.drpc.org                        | Block:  66661532 | Latency: 50ms
+[2026-04-04T23:21:11.645Z] ✅ [Sonic          ] https://rpc.soniclabs.com                     | Block:  66661532 | Latency: 211ms
+[2026-04-04T23:21:11.711Z] ❌ [Sei Network    ] https://sei-rpc.publicnode.com                | FAILED: Method not found
+[2026-04-04T23:21:11.745Z] ✅ [Sei Network    ] https://sei.drpc.org                          | Block: 200903777 | Latency: 100ms
+[2026-04-04T23:21:11.794Z] ✅ [Linea          ] https://linea.drpc.org                        | Block:  30062005 | Latency: 49ms
+[2026-04-04T23:21:11.874Z] ✅ [Linea          ] https://rpc.linea.build                       | Block:  30062005 | Latency: 129ms
+[2026-04-04T23:21:11.935Z] ✅ [Blast          ] https://rpc.blast.io                          | Block:  33267528 | Latency: 61ms
+[2026-04-04T23:21:11.971Z] ✅ [Blast          ] https://blast.drpc.org                        | Block:  33267528 | Latency: 97ms
+[2026-04-04T23:21:12.026Z] ✅ [Scroll         ] https://rpc.scroll.io                         | Block:  33076764 | Latency: 54ms
+[2026-04-04T23:21:12.070Z] ✅ [Scroll         ] https://scroll.drpc.org                       | Block:  33076764 | Latency: 99ms
+[2026-04-04T23:21:12.125Z] ✅ [Mantle         ] https://mantle.drpc.org                       | Block:  93607280 | Latency: 55ms
+[2026-04-04T23:21:12.150Z] ✅ [Mantle         ] https://rpc.mantle.xyz                        | Block:  93607280 | Latency: 80ms
+[2026-04-04T23:21:12.181Z] ✅ [Polygon zkEVM  ] https://zkevm-rpc.com                         | Block:  30985931 | Latency: 31ms
+[2026-04-04T23:21:12.219Z] ✅ [Celo           ] https://forno.celo.org                        | Block:  63444113 | Latency: 37ms
+[2026-04-04T23:21:12.333Z] ✅ [Celo           ] https://celo.drpc.org                         | Block:  63444113 | Latency: 152ms
+[2026-04-04T23:21:12.401Z] ✅ [Gnosis         ] https://rpc.gnosischain.com                   | Block:  45508458 | Latency: 68ms
+[2026-04-04T23:21:12.432Z] ✅ [Gnosis         ] https://gnosis.drpc.org                       | Block:  45508458 | Latency: 99ms
+[2026-04-04T23:21:12.451Z] ❌ [Fantom         ] https://rpc.ankr.com/fantom                   | FAILED: Unauthorized: You must authenticate your request w
+[2026-04-04T23:21:12.610Z] ❌ [Fantom         ] https://fantom.drpc.org                       | FAILED: the method eth_blockNumber does not exist/is not a
+[2026-04-04T23:21:12.658Z] ✅ [Moonbeam       ] https://rpc.api.moonbeam.network              | Block:  15092599 | Latency: 47ms
+[2026-04-04T23:21:12.711Z] ✅ [Moonbeam       ] https://moonbeam.drpc.org                     | Block:  15092599 | Latency: 100ms
+[2026-04-04T23:21:12.779Z] ✅ [Moonriver      ] https://moonriver.publicnode.com              | Block:  15765323 | Latency: 68ms
+[2026-04-04T23:21:12.859Z] ✅ [Cronos         ] https://evm.cronos.org                        | Block:  63594270 | Latency: 78ms
+[2026-04-04T23:21:12.891Z] ✅ [Cronos         ] https://cronos.drpc.org                       | Block:  63594270 | Latency: 111ms
+[2026-04-04T23:21:12.973Z] ✅ [X Layer        ] https://xlayer.drpc.org                       | Block:  56575837 | Latency: 82ms
+[2026-04-04T23:21:13.127Z] ✅ [X Layer        ] https://rpc.xlayer.tech                       | Block:  56575837 | Latency: 236ms
+[2026-04-04T23:21:13.238Z] ❌ [Taiko          ] https://taiko.drpc.org                        | FAILED: the method eth_blockNumber does not exist/is not a
+[2026-04-04T23:21:13.257Z] ✅ [Taiko          ] https://rpc.mainnet.taiko.xyz                 | Block:   5091234 | Latency: 129ms
+[2026-04-04T23:21:13.354Z] ✅ [opBNB          ] https://opbnb.drpc.org                        | Block: 128911770 | Latency: 97ms
+[2026-04-04T23:21:13.813Z] ✅ [opBNB          ] https://opbnb-mainnet-rpc.bnbchain.org        | Block: 128911774 | Latency: 556ms
+[2026-04-04T23:21:13.912Z] ✅ [Metis          ] https://metis.drpc.org                        | Block:  22474880 | Latency: 99ms
+[2026-04-04T23:21:13.927Z] ✅ [Metis          ] https://andromeda.metis.io                    | Block:  22474880 | Latency: 113ms
+[2026-04-04T23:21:14.035Z] ✅ [Core           ] https://core.drpc.org                         | Block:  34012206 | Latency: 107ms
+[2026-04-04T23:21:14.045Z] ✅ [Core           ] https://rpc.coredao.org                       | Block:  34012206 | Latency: 117ms
+[2026-04-04T23:21:14.147Z] ✅ [World Chain    ] https://worldchain.drpc.org                   | Block:  28004618 | Latency: 102ms
+[2026-04-04T23:21:14.185Z] ✅ [Evmos          ] https://evmos-evm-rpc.publicnode.com          | Block:  36434372 | Latency: 38ms
+[2026-04-04T23:21:14.198Z] ✅ [Evmos          ] https://evmos.drpc.org                        | Block:  36434372 | Latency: 51ms
+[2026-04-04T23:21:14.298Z] ✅ [Kava EVM       ] https://kava.drpc.org                         | Block:  20115227 | Latency: 100ms
+[2026-04-04T23:21:14.544Z] ✅ [Kava EVM       ] https://evm.kava.io                           | Block:  20115227 | Latency: 345ms
+[2026-04-04T23:21:14.663Z] ❌ [Fuse           ] https://fuse.drpc.org                         | FAILED: the method eth_blockNumber does not exist/is not a
+[2026-04-04T23:21:14.714Z] ✅ [Fuse           ] https://rpc.fuse.io                           | Block:  41280072 | Latency: 167ms
+[2026-04-04T23:21:14.808Z] ✅ [Telos EVM      ] https://telos.drpc.org                        | Block: 460679175 | Latency: 94ms
+[2026-04-04T23:21:14.815Z] ❌ [Telos EVM      ] https://mainnet.telos.net                     | FAILED: Invalid Response
+[2026-04-04T23:21:14.862Z] ❌ [Rootstock      ] https://rootstock.drpc.org                    | FAILED: the method eth_blockNumber does not exist/is not a
+[2026-04-04T23:21:15.296Z] ✅ [Rootstock      ] https://public-node.rsk.co                    | Block:   8698780 | Latency: 480ms
+[2026-04-04T23:21:15.408Z] ✅ [Ethereum Classic] https://etc.drpc.org                          | Block:  24304985 | Latency: 111ms
+[2026-04-04T23:21:15.695Z] ✅ [Ethereum Classic] https://etc.rivet.link                        | Block:  24304984 | Latency: 398ms
+[2026-04-04T23:21:15.753Z] ✅ [Ronin          ] https://ronin.drpc.org                        | Block:  54493093 | Latency: 56ms
+[2026-04-04T23:21:16.349Z] ✅ [Ronin          ] https://api.roninchain.com/rpc                | Block:  54493094 | Latency: 651ms
+[2026-04-04T23:21:16.421Z] ✅ [CLV            ] https://iris-evm-rpc.publicnode.com           | Block:  34778003 | Latency: 71ms
+[2026-04-04T23:21:16.440Z] ❌ [Sepolia        ] https://rpc.ankr.com/eth_sepolia              | FAILED: Unauthorized: You must authenticate your request w
+[2026-04-04T23:21:16.473Z] ✅ [Sepolia        ] https://sepolia.drpc.org                      | Block:  10591635 | Latency: 51ms
+[2026-04-04T23:21:16.575Z] ✅ [Base Sepolia   ] https://base-sepolia.drpc.org                 | Block:  39788294 | Latency: 102ms
+[2026-04-04T23:21:16.579Z] ✅ [Base Sepolia   ] https://sepolia.base.org                      | Block:  39788294 | Latency: 106ms
+[2026-04-04T23:21:16.683Z] ✅ [Arbitrum Sepolia] https://arbitrum-sepolia.drpc.org             | Block: 256653941 | Latency: 104ms
+[2026-04-04T23:21:16.704Z] ✅ [Arbitrum Sepolia] https://sepolia-rollup.arbitrum.io/rpc        | Block: 256653940 | Latency: 125ms
+[2026-04-04T23:21:16.752Z] ✅ [OP Sepolia     ] https://optimism-sepolia.drpc.org             | Block:  41771168 | Latency: 48ms
+[2026-04-04T23:21:16.759Z] ✅ [OP Sepolia     ] https://sepolia.optimism.io                   | Block:  41771168 | Latency: 55ms
+[2026-04-04T23:21:16.791Z] ✅ [Polygon Amoy   ] https://rpc-amoy.polygon.technology           | Block:  36108666 | Latency: 32ms
+[2026-04-04T23:21:16.861Z] ✅ [Polygon Amoy   ] https://polygon-amoy.drpc.org                 | Block:  36108665 | Latency: 102ms
+[2026-04-04T23:21:16.955Z] ✅ [BNB Testnet    ] https://bsc-testnet.drpc.org                  | Block:  99788491 | Latency: 94ms
+[2026-04-04T23:21:16.955Z] 
+--- 📊 AUDIT SUMMARY ---
+[2026-04-04T23:21:16.956Z] ✅ Healthy Endpoints: 66
+[2026-04-04T23:21:16.956Z] ❌ Failed Endpoints:  11
+[2026-04-04T23:21:16.956Z] Report saved to: /workspaces/wallet/wallet/server/src/blockchain/audit-results.log
+[2026-04-04T23:21:16.956Z] -------------------------
+
