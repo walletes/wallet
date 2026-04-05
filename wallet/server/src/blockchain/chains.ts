@@ -1,8 +1,14 @@
 import dotenv from 'dotenv';
-import { resolve } from 'path';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
+// ESM-compatible __dirname replacement
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Load .env from wallet/server/.env (3 levels up from wallet/server/src/blockchain/chains.ts)
 dotenv.config({
-path: resolve(process.cwd(), '.env')
+  path: resolve(__dirname, '../../../.env')
 });
 
 export interface ChainConfig {
@@ -25,14 +31,23 @@ const ALCHEMY_KEY: string = process.env.ALCHEMY_KEY || process.env.ALCHEMY_API_K
 /**
  * multi-RPC Resolver
  * [User Override] -> [Alchemy Premium] -> [High-Availability Public Cluster]
+ * UPGRADE: Prioritizes private keys over public fallbacks to avoid "Unauthorized" errors.
  */
 const getRpcs = (chainId: number, fallbacks: string[], alchemyAlias?: string): string[] => {
-  const rpcs = [...fallbacks];
+  const rpcs: string[] = [];
+  
+  // 1. Absolute Priority: Specific .env override (e.g., RPC_137)
   const envOverride = process.env[`RPC_${chainId}`];
-  if (envOverride) rpcs.unshift(envOverride); 
+  if (envOverride) rpcs.push(envOverride); 
+
+  // 2. High Priority: Alchemy Premium URL
   if (ALCHEMY_KEY && alchemyAlias) {
-  rpcs.unshift(`https://${alchemyAlias}.g.alchemy.com/v2/${ALCHEMY_KEY}`);
+    rpcs.push(`https://${alchemyAlias}.g.alchemy.com/v2/${ALCHEMY_KEY}`);
   }
+
+  // 3. Fallback: Public Cluster (Ankr, dRPC, etc.)
+  rpcs.push(...fallbacks);
+
   return [...new Set(rpcs)];
 };
 
@@ -50,7 +65,7 @@ export const EVM_CHAINS: ChainConfig[] = [
   { id: 43114, name: 'Avalanche', symbol: 'AVAX', rpcs: getRpcs(43114, ['https://avalanche.drpc.org', 'https://rpc.ankr.com/avalanche'], 'avax-mainnet'), explorer: 'https://snowtrace.io', isL2: false, blockTimeSec: 2, nativePriceId: 'avalanche-2', supportsEIP1559: true },
   { id: 324, name: 'zkSync Era', symbol: 'ETH', rpcs: getRpcs(324, ['https://mainnet.era.zksync.io', 'https://zksync.drpc.org'], 'zksync-mainnet'), explorer: 'https://explorer.zksync.io', isL2: true, blockTimeSec: 1, nativePriceId: 'ethereum', supportsEIP1559: true },
   { id: 146, name: 'Sonic', symbol: 'S', rpcs: ['https://sonic.drpc.org', 'https://rpc.soniclabs.com'], explorer: 'https://sonicscan.org', blockTimeSec: 0.4, nativePriceId: 'fantom', supportsEIP1559: true },
-  { id: 1329, name: 'Sei Network', symbol: 'SEI', rpcs: ['https://sei.drpc.org', 'https://sei-rpc.publicnode.com'], explorer: 'https://seitrace.com', blockTimeSec: 0.4, nativePriceId: 'sei-network', supportsEIP1559: false },
+  { id: 1329, name: 'Sei Network', symbol: 'SEI', rpcs: getRpcs(1329, ['https://sei.drpc.org', 'https://sei-rpc.publicnode.com']), explorer: 'https://seitrace.com', blockTimeSec: 0.4, nativePriceId: 'sei-network', supportsEIP1559: false },
   { id: 59144, name: 'Linea', symbol: 'ETH', rpcs: getRpcs(59144, ['https://linea.drpc.org', 'https://rpc.linea.build'], 'linea-mainnet'), explorer: 'https://lineascan.build', isL2: true, blockTimeSec: 12, nativePriceId: 'ethereum', supportsEIP1559: true },
   { id: 81457, name: 'Blast', symbol: 'ETH', rpcs: ['https://blast.drpc.org', 'https://rpc.blast.io'], explorer: 'https://blastscan.io', isL2: true, blockTimeSec: 2, nativePriceId: 'ethereum', supportsEIP1559: true },
   { id: 534352, name: 'Scroll', symbol: 'ETH', rpcs: ['https://scroll.drpc.org', 'https://rpc.scroll.io'], explorer: 'https://scrollscan.com', isL2: true, blockTimeSec: 3, nativePriceId: 'ethereum', supportsEIP1559: true },
@@ -58,7 +73,7 @@ export const EVM_CHAINS: ChainConfig[] = [
   { id: 1101, name: 'Polygon zkEVM', symbol: 'ETH', rpcs: ['https://zkevm-rpc.com'], explorer: 'https://zkevm.polygonscan.com', isL2: true, blockTimeSec: 2, nativePriceId: 'ethereum', supportsEIP1559: true },
   { id: 42220, name: 'Celo', symbol: 'CELO', rpcs: ['https://celo.drpc.org', 'https://forno.celo.org'], explorer: 'https://celoscan.io', blockTimeSec: 5, nativePriceId: 'celo', supportsEIP1559: true },
   { id: 100, name: 'Gnosis', symbol: 'xDAI', rpcs: ['https://gnosis.drpc.org', 'https://rpc.gnosischain.com'], explorer: 'https://gnosisscan.io', blockTimeSec: 5, nativePriceId: 'xdai', supportsEIP1559: true },
-  { id: 250, name: 'Fantom', symbol: 'FTM', rpcs: ['https://fantom.drpc.org', 'https://rpc.ankr.com/fantom'], explorer: 'https://ftmscan.com', blockTimeSec: 1, nativePriceId: 'fantom', supportsEIP1559: false },
+  { id: 250, name: 'Fantom', symbol: 'FTM', rpcs: getRpcs(250, ['https://fantom.drpc.org', 'https://rpc.ankr.com/fantom']), explorer: 'https://ftmscan.com', blockTimeSec: 1, nativePriceId: 'fantom', supportsEIP1559: false },
   { id: 1284, name: 'Moonbeam', symbol: 'GLMR', rpcs: ['https://moonbeam.drpc.org', 'https://rpc.api.moonbeam.network'], explorer: 'https://moonscan.io', blockTimeSec: 12, nativePriceId: 'moonbeam', supportsEIP1559: true },
   { id: 1285, name: 'Moonriver', symbol: 'MOVR', rpcs: ['https://moonriver.publicnode.com'], explorer: 'https://moonriver.moonscan.io', blockTimeSec: 12, nativePriceId: 'moonriver', supportsEIP1559: true },
   { id: 25, name: 'Cronos', symbol: 'CRO', rpcs: ['https://cronos.drpc.org', 'https://evm.cronos.org'], explorer: 'https://cronoscan.com', blockTimeSec: 6, nativePriceId: 'crypto-com-chain', supportsEIP1559: true },
@@ -76,7 +91,7 @@ export const EVM_CHAINS: ChainConfig[] = [
   { id: 61, name: 'Ethereum Classic', symbol: 'ETC', rpcs: ['https://etc.drpc.org', 'https://etc.rivet.link'], explorer: 'https://etcscan.org', blockTimeSec: 13, nativePriceId: 'ethereum-classic', supportsEIP1559: false },
   { id: 2020, name: 'Ronin', symbol: 'RON', rpcs: ['https://ronin.drpc.org', 'https://api.roninchain.com/rpc'], explorer: 'https://app.roninchain.com', blockTimeSec: 3, nativePriceId: 'ronin', supportsEIP1559: true },
   { id: 1024, name: 'CLV', symbol: 'CLV', rpcs: ['https://iris-evm-rpc.publicnode.com'], explorer: 'https://clvscan.com', blockTimeSec: 12, nativePriceId: 'clv', supportsEIP1559: true },
-  { id: 11155111, name: 'Sepolia', symbol: 'ETH', rpcs: ['https://sepolia.drpc.org', 'https://rpc.ankr.com/eth_sepolia'], explorer: 'https://sepolia.etherscan.io', blockTimeSec: 12, nativePriceId: 'ethereum', supportsEIP1559: true },
+  { id: 11155111, name: 'Sepolia', symbol: 'ETH', rpcs: getRpcs(11155111, ['https://sepolia.drpc.org', 'https://rpc.ankr.com/eth_sepolia'], 'eth-sepolia'), explorer: 'https://sepolia.etherscan.io', blockTimeSec: 12, nativePriceId: 'ethereum', supportsEIP1559: true },
   { id: 84532, name: 'Base Sepolia', symbol: 'ETH', rpcs: ['https://sepolia.base.org', 'https://base-sepolia.drpc.org'], explorer: 'https://sepolia.basescan.org', isL2: true, blockTimeSec: 2, nativePriceId: 'ethereum', supportsEIP1559: true },
   { id: 421614, name: 'Arbitrum Sepolia', symbol: 'ETH', rpcs: ['https://arbitrum-sepolia.drpc.org', 'https://sepolia-rollup.arbitrum.io/rpc'], explorer: 'https://sepolia.arbiscan.io', isL2: true, blockTimeSec: 0.3, nativePriceId: 'ethereum', supportsEIP1559: true },
   { id: 11155420, name: 'OP Sepolia', symbol: 'ETH', rpcs: ['https://optimism-sepolia.drpc.org', 'https://sepolia.optimism.io'], explorer: 'https://sepolia-optimism.etherscan.io', isL2: true, blockTimeSec: 2, nativePriceId: 'ethereum', supportsEIP1559: true },
@@ -97,16 +112,30 @@ const pingRpc = async (url: string): Promise<RpcScore> => {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), RPC_TIMEOUT);
+    
+    // AUTHENTICATION UPGRADE: Apply headers if Alchemy is detected
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (url.includes('alchemy.com') && ALCHEMY_KEY) {
+       headers['Authorization'] = `Bearer ${ALCHEMY_KEY}`;
+    }
+
     const res = await fetch(url, {
       method: 'POST',
       signal: controller.signal,
-      headers: { 'Content-Type': 'application/json' },
+      headers: headers,
       body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_blockNumber', params: [] })
     });
+    
     clearTimeout(timeout);
-    if (!res.ok) throw new Error('Offline');
+    
+    if (!res.ok) {
+       const errText = await res.text().catch(() => 'No error body');
+       console.warn(`[RPC DEBUG] ${url} returned ${res.status}: ${errText}`);
+       throw new Error('Offline');
+    }
+    
     return { url, latency: Date.now() - start, success: true };
-  } catch {
+  } catch (err) {
     return { url, latency: Infinity, success: false };
   }
 };
